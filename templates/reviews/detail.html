@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes da Revisão - Revisões Jurídicas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-eye"></i> Detalhes da Revisão</h1>
+    <div>
+        <a href="{{ url_for('reviews.export', review_id=review.id, format='pdf') }}" class="btn btn-danger">
+            <i class="fas fa-file-pdf"></i> Exportar PDF
+        </a>
+        <a href="{{ url_for('reviews.export', review_id=review.id, format='docx') }}" class="btn btn-primary">
+            <i class="fas fa-file-word"></i> Exportar DOCX
+        </a>
+        <a href="{{ url_for('reviews.list') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+</div>
+
+<!-- Informações do Documento -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-file-alt"></i> Informações do Documento</h5>
+    </div>
+    <div class="card-body">
+        <p><strong>Título:</strong> {{ review.title }}</p>
+        <p><strong>Resumo:</strong> {{ review.summary or 'N/A' }}</p>
+        <p><strong>Descrição:</strong> {{ review.description or 'N/A' }}</p>
+    </div>
+</div>
+
+<!-- Informações da Revisão -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-clipboard-check"></i> Informações da Revisão</h5>
+    </div>
+    <div class="card-body">
+        <p><strong>Versão:</strong> v{{ review.version }}</p>
+        <p><strong>Revisor:</strong> {{ review.reviewer_name }}</p>
+        <p><strong>Data/Hora:</strong> {{ review.review_date.strftime('%d/%m/%Y %H:%M:%S') if review.review_date else 'N/A' }}</p>
+        <p><strong>Comentários:</strong> {{ review.comments or 'N/A' }}</p>
+    </div>
+</div>
+
+<!-- Riscos -->
+{% if review.risks %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Riscos Identificados</h5>
+    </div>
+    <div class="card-body">
+        {% for risk in review.risks %}
+        <div class="mb-3 p-3 border rounded">
+            <p><strong>Risco Identificado:</strong> {{ risk.risk_text }}</p>
+            <p><strong>Sugestão do Jurídico:</strong> {{ risk.legal_suggestion or 'N/A' }}</p>
+            <p><strong>Definição Final:</strong> {{ risk.final_definition or 'N/A' }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Observações -->
+{% if review.observations %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-sticky-note"></i> Observações Gerais</h5>
+    </div>
+    <div class="card-body">
+        <p>{{ review.observations }}</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Histórico de Aprovações -->
+{% if review.approvals %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-check-circle"></i> Histórico de Aprovações</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Aprovador</th>
+                        <th>Status</th>
+                        <th>Data/Hora</th>
+                        <th>Comentário</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for approval in review.approvals %}
+                    <tr>
+                        <td>{{ approval.approver_name }}</td>
+                        <td>
+                            {% if approval.status == 'approved' %}
+                                <span class="badge bg-success">Aprovado</span>
+                            {% elif approval.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejeitado</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pendente</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ approval.approved_at.strftime('%d/%m/%Y %H:%M:%S') if approval.approved_at else 'Pendente' }}</td>
+                        <td>{{ approval.comments or 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Documentos Anexos -->
+{% if review.documents %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-paperclip"></i> Documentos Anexos</h5>
+    </div>
+    <div class="card-body">
+        <div class="list-group">
+            {% for doc in review.documents %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-file"></i> {{ doc.file_name }}
+                    <small class="text-muted">({{ (doc.file_size / 1024 / 1024)|round(2) }} MB)</small>
+                </div>
+                <a href="{{ url_for('documents.download', doc_id=doc.id) }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-download"></i> Download
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Histórico de Versões -->
+{% if review.versions and review.versions|length > 1 %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-history"></i> Histórico de Versões</h5>
+    </div>
+    <div class="card-body">
+        <div class="list-group">
+            {% for version in review.versions %}
+            <a href="{{ url_for('reviews.detail', review_id=version.id) }}" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">Versão {{ version.version }}</h6>
+                    <small>{{ version.review_date.strftime('%d/%m/%Y %H:%M') if version.review_date else 'N/A' }}</small>
+                </div>
+                <p class="mb-1">Revisor: {{ version.reviewer_name }}</p>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

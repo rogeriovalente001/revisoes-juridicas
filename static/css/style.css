@@ -1,0 +1,80 @@
+/* ========================================
+   REVISÕES JURÍDICAS - Estilos Personalizados
+   ======================================== */
+
+:root {
+    /* Paleta de cores Argo Solutions */
+    --primary-color: #8B5CF6;        /* Roxo médio */
+    --secondary-color: #7C3AED;      /* Roxo escuro */
+    --accent-color: #F97316;         /* Laranja */
+    --info-color: #3B82F6;           /* Azul */
+    --success-color: #10B981;        /* Verde */
+    --warning-color: #F59E0B;       /* Amarelo */
+    --danger-color: #EF4444;        /* Vermelho */
+    --light-color: #F8FAFC;          /* Cinza claro */
+    --dark-color: #1F2937;           /* Cinza escuro */
+    --gray-color: #6B7280;           /* Cinza médio */
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+
+.argo-header {
+    background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+    color: white;
+    padding: 0.75rem 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.header-logo {
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.header-brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 8px;
+}
+
+.card-header {
+    background-color: var(--light-color);
+    border-bottom: 2px solid var(--primary-color);
+    font-weight: 600;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--light-color);
+}
+
+.badge {
+    padding: 0.5em 0.75em;
+}
+

@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if review else 'Nova' }} Revisão - Revisões Jurídicas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-{{ 'edit' if review else 'plus' }}"></i> {{ 'Editar' if review else 'Nova' }} Revisão</h1>
+    <a href="{{ url_for('reviews.list') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <!-- Informações do Documento -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-file-alt"></i> Informações do Documento</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Título do Documento *</label>
+                <input type="text" name="title" class="form-control" value="{{ review.title if review else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Resumo do Documento</label>
+                <textarea name="summary" class="form-control" rows="3">{{ review.summary if review else '' }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Breve Descrição do Objeto do Documento</label>
+                <textarea name="description" class="form-control" rows="5">{{ review.description if review else '' }}</textarea>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Revisões -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-clipboard-check"></i> Revisões</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Responsável pela Revisão</label>
+                <input type="text" class="form-control" value="{{ current_user.name }}" disabled>
+                <small class="form-text text-muted">Preenchido automaticamente</small>
+            </div>
+            {% if review %}
+            <div class="mb-3">
+                <label class="form-label">Versão</label>
+                <input type="text" class="form-control" value="v{{ review.version }} (Nova versão será criada)" disabled>
+            </div>
+            {% endif %}
+            <div class="mb-3">
+                <label class="form-label">Comentários da Revisão</label>
+                <textarea name="comments" class="form-control" rows="5">{{ review.comments if review else '' }}</textarea>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Riscos -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Riscos Identificados e Tratamento</h5>
+        </div>
+        <div class="card-body" id="risks-container">
+            {% if review and review.risks %}
+                {% for risk in review.risks %}
+                <div class="risk-item mb-3 p-3 border rounded">
+                    <div class="mb-3">
+                        <label class="form-label">Risco Identificado</label>
+                        <textarea name="risk_text[]" class="form-control" rows="2">{{ risk.risk_text }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sugestão do Jurídico</label>
+                        <textarea name="legal_suggestion[]" class="form-control" rows="2">{{ risk.legal_suggestion }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Definição Final</label>
+                        <textarea name="final_definition[]" class="form-control" rows="2">{{ risk.final_definition }}</textarea>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-danger remove-risk">
+                        <i class="fas fa-trash"></i> Remover
+                    </button>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="risk-item mb-3 p-3 border rounded">
+                    <div class="mb-3">
+                        <label class="form-label">Risco Identificado</label>
+                        <textarea name="risk_text[]" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sugestão do Jurídico</label>
+                        <textarea name="legal_suggestion[]" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Definição Final</label>
+                        <textarea name="final_definition[]" class="form-control" rows="2"></textarea>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-danger remove-risk">
+                        <i class="fas fa-trash"></i> Remover
+                    </button>
+                </div>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-primary" id="add-risk">
+                <i class="fas fa-plus"></i> Adicionar Risco
+            </button>
+        </div>
+    </div>
+    
+    <!-- Observações Gerais -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-sticky-note"></i> Observações Gerais</h5>
+        </div>
+        <div class="card-body">
+            <textarea name="observations" class="form-control" rows="5">{{ review.observations if review else '' }}</textarea>
+            <small class="form-text text-muted">Comentários adicionais sobre riscos futuros, compliance, ajustes recomendados, etc.</small>
+        </div>
+    </div>
+    
+    <!-- Upload de Documentos -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-paperclip"></i> Documentos Anexos</h5>
+        </div>
+        <div class="card-body">
+            <input type="file" name="files" class="form-control" multiple accept=".pdf,.doc,.docx,.txt,.rtf">
+            <small class="form-text text-muted">Formatos permitidos: PDF, DOC, DOCX, TXT, RTF. Máximo 10MB por arquivo.</small>
+        </div>
+    </div>
+    
+    <div class="d-flex justify-content-end">
+        <a href="{{ url_for('reviews.list') }}" class="btn btn-secondary me-2">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Salvar
+        </button>
+    </div>
+</form>
+
+{% block extra_js %}
+<script>
+document.getElementById('add-risk').addEventListener('click', function() {
+    const container = document.getElementById('risks-container');
+    const newRisk = document.createElement('div');
+    newRisk.className = 'risk-item mb-3 p-3 border rounded';
+    newRisk.innerHTML = `
+        <div class="mb-3">
+            <label class="form-label">Risco Identificado</label>
+            <textarea name="risk_text[]" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Sugestão do Jurídico</label>
+            <textarea name="legal_suggestion[]" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Definição Final</label>
+            <textarea name="final_definition[]" class="form-control" rows="2"></textarea>
+        </div>
+        <button type="button" class="btn btn-sm btn-danger remove-risk">
+            <i class="fas fa-trash"></i> Remover
+        </button>
+    `;
+    container.insertBefore(newRisk, this);
+    
+    newRisk.querySelector('.remove-risk').addEventListener('click', function() {
+        newRisk.remove();
+    });
+});
+
+document.querySelectorAll('.remove-risk').forEach(btn => {
+    btn.addEventListener('click', function() {
+        this.closest('.risk-item').remove();
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}
+

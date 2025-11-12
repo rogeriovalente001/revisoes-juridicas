@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Aprovar Revisão - Revisões Jurídicas{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-check-circle"></i> Aprovar Revisão</h5>
+    </div>
+    <div class="card-body">
+        <h4>{{ review.title }}</h4>
+        <p><strong>Versão:</strong> v{{ review.version }}</p>
+        <p><strong>Revisor:</strong> {{ review.reviewer_name }}</p>
+        <p><strong>Data:</strong> {{ review.review_date.strftime('%d/%m/%Y %H:%M:%S') if review.review_date else 'N/A' }}</p>
+        <p><strong>Comentários:</strong> {{ review.comments or 'N/A' }}</p>
+        
+        <hr>
+        
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="token" value="{{ request.args.get('token') }}">
+            
+            <div class="mb-3">
+                <label class="form-label">Comentário * <small class="text-danger">(Obrigatório)</small></label>
+                <textarea name="comments" class="form-control" rows="5" required placeholder="Digite seu comentário sobre a aprovação ou rejeição..."></textarea>
+            </div>
+            
+            <div class="d-flex justify-content-end gap-2">
+                <button type="submit" name="action" value="reject" class="btn btn-danger">
+                    <i class="fas fa-times"></i> Rejeitar
+                </button>
+                <button type="submit" name="action" value="approve" class="btn btn-success">
+                    <i class="fas fa-check"></i> Aprovar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

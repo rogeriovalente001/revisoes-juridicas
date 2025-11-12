@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitar Aprovação - Revisões Jurídicas{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-check-circle"></i> Solicitar Aprovação</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Selecione os usuários que devem aprovar esta revisão.</p>
+        
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="mb-3">
+                <label class="form-label">Aprovadores</label>
+                <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                    {% for user in users %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="approvers[]" 
+                               value="{{ user.email }}" id="approver_{{ loop.index }}">
+                        <label class="form-check-label" for="approver_{{ loop.index }}">
+                            {{ user.name }} ({{ user.email }})
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-end">
+                <a href="{{ url_for('reviews.detail', review_id=review.id) }}" class="btn btn-secondary me-2">Cancelar</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i> Enviar Solicitação
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
