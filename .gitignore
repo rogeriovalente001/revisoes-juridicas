@@ -154,9 +154,9 @@ $RECYCLE.BIN/
 *.odf
 ~$*
 
-# Database setup scripts (temporários - descomente se quiser versionar)
-# database/00-*.sql
-# database/01-*.sql
-# database/02-*.sql
-# database/03-*.sql
+# Database setup scripts (temporários)
+database/00-*.sql
+database/01-*.sql
+database/02-*.sql
+database/03-*.sql
 
