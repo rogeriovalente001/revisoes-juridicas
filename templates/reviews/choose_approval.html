@@ -27,6 +27,9 @@
         
         <form method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if return_to %}
+            <input type="hidden" name="return_to" value="{{ return_to }}">
+            {% endif %}
             
             <div class="d-flex justify-content-center gap-3">
                 <button type="submit" name="action" value="no" class="btn btn-secondary btn-lg">

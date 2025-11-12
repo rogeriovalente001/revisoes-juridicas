@@ -2,7 +2,7 @@
 Rotas de autenticação
 """
 
-from flask import Blueprint, request, redirect, url_for, session, flash
+from flask import Blueprint, request, redirect, url_for, session, flash, current_app
 from flask_login import login_user, logout_user
 from app.models import User
 from app.services.token_decryption_service import token_decryption_service
@@ -22,15 +22,18 @@ def connect_auth():
         if current_user and current_user.is_authenticated:
             return redirect(url_for('reviews.dashboard'))
         
-        # Se não tem token, mostrar mensagem
-        return redirect(url_for('auth.connect_auth'))
+        # Se não tem token e não está autenticado, redirecionar para o Connect
+        # para evitar loop de redirecionamento (sem mensagem de erro para não interferir no fluxo do Connect)
+        connect_url = current_app.config.get('CONNECT_URL', 'http://localhost:5001')
+        return redirect(connect_url)
     
     # POST - receber token
     token = request.form.get('token')
     
     if not token:
         flash('Token não fornecido', 'error')
-        return redirect(url_for('auth.connect_auth'))
+        connect_url = current_app.config.get('CONNECT_URL', 'http://localhost:5001')
+        return redirect(connect_url)
     
     try:
         # Descriptografar token
@@ -51,7 +54,8 @@ def connect_auth():
         
         if not user_email:
             flash('Token inválido: email não encontrado', 'error')
-            return redirect(url_for('auth.connect_auth'))
+            connect_url = current_app.config.get('CONNECT_URL', 'http://localhost:5001')
+            return redirect(connect_url)
         
         # Criar objeto User
         user = User(
@@ -91,24 +95,31 @@ def connect_auth():
         
     except ValueError as e:
         flash(f'Erro na autenticação: {str(e)}', 'error')
-        return redirect(url_for('auth.connect_auth'))
+        connect_url = current_app.config.get('CONNECT_URL', 'http://localhost:5001')
+        return redirect(connect_url)
     except Exception as e:
         flash(f'Erro interno na autenticação: {str(e)}', 'error')
-        return redirect(url_for('auth.connect_auth'))
+        connect_url = current_app.config.get('CONNECT_URL', 'http://localhost:5001')
+        return redirect(connect_url)
 
 
 @bp.route('/logout')
 def logout():
-    """Fazer logout e redirecionar para tela de origem no Connect"""
-    from flask import current_app
+    """Fazer logout e redirecionar baseado no parâmetro return_to"""
+    # Obter parâmetro return_to da query string
+    return_to = request.args.get('return_to', 'connect')
     
-    # Obter URL de retorno da sessão antes de limpar
+    # Obter URL de retorno da sessão ANTES de limpar
     return_url = session.get('return_url')
     
     logout_user()
     session.clear()
     
-    # Redirecionar para URL de retorno ou página principal do Connect
+    # Se return_to for 'dashboard', redirecionar para dashboard
+    if return_to == 'dashboard':
+        return redirect(url_for('reviews.dashboard'))
+    
+    # Caso contrário, redirecionar para Connect (comportamento padrão)
     if return_url:
         return redirect(return_url)
     else:

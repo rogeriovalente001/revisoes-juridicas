@@ -50,7 +50,7 @@ body {
 }
 
 /* Cards */
-.card {
+.card:not(.dashboard-card) {
     background-color: var(--bg-primary);
     border-color: var(--border-color);
     color: var(--text-primary);
@@ -82,13 +82,40 @@ body {
     border-color: var(--text-primary) !important;
 }
 
+/* Dashboard cards - não sobrescrever cores */
+.dashboard-card {
+    border: none !important;
+}
+
+.dashboard-card .card-body {
+    background-color: transparent !important;
+}
+
+.dashboard-card-primary,
+.dashboard-card-warning,
+.dashboard-card-success,
+.dashboard-card-info,
+.dashboard-card-secondary,
+.dashboard-card-dark {
+    border: none !important;
+}
+
+.dashboard-card-primary .card-body,
+.dashboard-card-warning .card-body,
+.dashboard-card-success .card-body,
+.dashboard-card-info .card-body,
+.dashboard-card-secondary .card-body,
+.dashboard-card-dark .card-body {
+    background-color: transparent !important;
+}
+
 .card-header {
     background-color: var(--bg-secondary);
     border-bottom-color: var(--border-color);
     color: var(--text-primary);
 }
 
-.card-body {
+.card-body:not(.dashboard-card .card-body) {
     background-color: var(--bg-primary);
     color: var(--text-primary);
 }
@@ -338,8 +365,8 @@ input[type="radio"] {
     box-shadow: 0 1rem 3rem var(--shadow-medium) !important;
 }
 
-/* Transições suaves */
-* {
+/* Transições suaves - exceto dashboard cards */
+*:not(.dashboard-card):not(.dashboard-card *):not(.dashboard-card-number):not(.dashboard-card-icon) {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 

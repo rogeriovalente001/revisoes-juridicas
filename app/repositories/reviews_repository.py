@@ -27,6 +27,8 @@ def list_reviews(user_email: str, filters: Dict = None) -> List[Dict]:
             where_clauses.append("EXISTS (SELECT 1 FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'pending')")
         elif status == 'approved':
             where_clauses.append("EXISTS (SELECT 1 FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'approved')")
+        elif status == 'rejected':
+            where_clauses.append("EXISTS (SELECT 1 FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'rejected')")
         elif status == 'in_review':
             where_clauses.append("NOT EXISTS (SELECT 1 FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id)")
     
@@ -66,7 +68,8 @@ def list_reviews(user_email: str, filters: Dict = None) -> List[Dict]:
             d.summary,
             d.description,
             (SELECT COUNT(*) FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'pending') as pending_approvals,
-            (SELECT COUNT(*) FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'approved') as approved_count
+            (SELECT COUNT(*) FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'approved') as approved_count,
+            (SELECT COUNT(*) FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'rejected') as rejected_count
         FROM revisoes_juridicas.reviews r
         INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
         INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
@@ -345,7 +348,8 @@ def get_recent_reviews_list(user_email: str, limit: int = 5) -> List[Dict]:
             d.summary,
             d.description,
             (SELECT COUNT(*) FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'pending') as pending_approvals,
-            (SELECT COUNT(*) FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'approved') as approved_count
+            (SELECT COUNT(*) FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'approved') as approved_count,
+            (SELECT COUNT(*) FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'rejected') as rejected_count
         FROM revisoes_juridicas.reviews r
         INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
         INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id

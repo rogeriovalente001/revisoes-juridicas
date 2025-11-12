@@ -141,60 +141,138 @@
         </button>
     </div>
 </form>
+{% endblock %}
 
 {% block extra_js %}
 <script>
-// Preencher data/hora atual ao carregar a página
-document.addEventListener('DOMContentLoaded', function() {
-    const now = new Date();
-    const dateTimeStr = now.toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
-    const datetimeField = document.getElementById('review_datetime');
-    if (datetimeField) {
-        datetimeField.value = dateTimeStr;
-    }
-});
-
-document.getElementById('add-risk').addEventListener('click', function() {
-    const container = document.getElementById('risks-container');
-    const newRisk = document.createElement('div');
-    newRisk.className = 'risk-item mb-3 p-3 border rounded';
-    newRisk.innerHTML = `
-        <div class="mb-3">
-            <label class="form-label">Risco Identificado</label>
-            <textarea name="risk_text[]" class="form-control" rows="2"></textarea>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Sugestão do Jurídico</label>
-            <textarea name="legal_suggestion[]" class="form-control" rows="2"></textarea>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Definição Final</label>
-            <textarea name="final_definition[]" class="form-control" rows="2"></textarea>
-        </div>
-        <button type="button" class="btn btn-sm btn-danger remove-risk">
-            <i class="fas fa-trash"></i> Remover
-        </button>
-    `;
-    container.insertBefore(newRisk, this);
+(function() {
+    'use strict';
     
-    newRisk.querySelector('.remove-risk').addEventListener('click', function() {
-        newRisk.remove();
-    });
-});
-
-document.querySelectorAll('.remove-risk').forEach(btn => {
-    btn.addEventListener('click', function() {
-        this.closest('.risk-item').remove();
-    });
-});
+    // Namespace único para evitar conflitos
+    const RISK_MANAGER_KEY = 'riskManagerInitialized';
+    
+    // Verificar se já foi inicializado
+    if (window[RISK_MANAGER_KEY]) {
+        return;
+    }
+    window[RISK_MANAGER_KEY] = true;
+    
+    // Preencher data/hora atual ao carregar a página
+    function initDateTime() {
+        const now = new Date();
+        const dateTimeStr = now.toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        const datetimeField = document.getElementById('review_datetime');
+        if (datetimeField) {
+            datetimeField.value = dateTimeStr;
+        }
+    }
+    
+    // Inicializar gerenciamento de riscos
+    function initRiskManager() {
+        const container = document.getElementById('risks-container');
+        if (!container) return;
+        
+        const addRiskBtn = document.getElementById('add-risk');
+        if (!addRiskBtn) return;
+        
+        // Verificar se já foi inicializado neste elemento
+        if (addRiskBtn.dataset.initialized === 'true') {
+            return;
+        }
+        addRiskBtn.dataset.initialized = 'true';
+        
+        let isAdding = false;
+        
+        // Handler para adicionar risco
+        function handleAddRisk(e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            
+            if (isAdding) {
+                return false;
+            }
+            
+            isAdding = true;
+            
+            const newRisk = document.createElement('div');
+            newRisk.className = 'risk-item mb-3 p-3 border rounded';
+            newRisk.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label">Risco Identificado</label>
+                    <textarea name="risk_text[]" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Sugestão do Jurídico</label>
+                    <textarea name="legal_suggestion[]" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Definição Final</label>
+                    <textarea name="final_definition[]" class="form-control" rows="2"></textarea>
+                </div>
+                <button type="button" class="btn btn-sm btn-danger remove-risk">
+                    <i class="fas fa-trash"></i> Remover
+                </button>
+            `;
+            
+            container.insertBefore(newRisk, addRiskBtn);
+            
+            setTimeout(function() {
+                isAdding = false;
+            }, 200);
+            
+            return false;
+        }
+        
+        // Handler para remover risco (event delegation)
+        let isRemoving = false;
+        function handleRemoveRisk(e) {
+            const removeBtn = e.target.closest('.remove-risk');
+            if (!removeBtn) return;
+            
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            
+            if (isRemoving) {
+                return false;
+            }
+            
+            isRemoving = true;
+            
+            const riskItem = removeBtn.closest('.risk-item');
+            if (riskItem) {
+                riskItem.remove();
+            }
+            
+            setTimeout(function() {
+                isRemoving = false;
+            }, 200);
+            
+            return false;
+        }
+        
+        // Adicionar listeners
+        addRiskBtn.addEventListener('click', handleAddRisk, true);
+        container.addEventListener('click', handleRemoveRisk, true);
+    }
+    
+    // Aguardar DOM estar pronto
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            initDateTime();
+            initRiskManager();
+        });
+    } else {
+        initDateTime();
+        initRiskManager();
+    }
+})();
 </script>
-{% endblock %}
 {% endblock %}
 

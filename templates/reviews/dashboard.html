@@ -2,6 +2,8 @@
 
 {% block title %}Dashboard - Revisões Jurídicas{% endblock %}
 
+{% block extra_css %}{% endblock %}
+
 {% block content %}
 <div class="mb-4">
     <h1><i class="fas fa-chart-line"></i> Dashboard</h1>
@@ -12,14 +14,14 @@
 <div class="row g-4 mb-4">
     <!-- Total de Revisões -->
     <div class="col-md-3">
-        <div class="card border-primary">
+        <div class="card dashboard-card dashboard-card-primary">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted mb-2">Total de Revisões</h6>
-                        <h2 class="mb-0 text-primary">{{ stats.total_reviews }}</h2>
+                        <h2 class="mb-0 dashboard-card-number">{{ stats.total_reviews }}</h2>
                     </div>
-                    <div class="text-primary" style="font-size: 2.5rem;">
+                    <div class="dashboard-card-icon">
                         <i class="fas fa-file-contract"></i>
                     </div>
                 </div>
@@ -29,14 +31,14 @@
     
     <!-- Pendentes de Aprovação -->
     <div class="col-md-3">
-        <div class="card border-warning">
+        <div class="card dashboard-card dashboard-card-warning">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted mb-2">Pendentes de Aprovação</h6>
-                        <h2 class="mb-0 text-warning">{{ stats.pending_approvals }}</h2>
+                        <h2 class="mb-0 dashboard-card-number">{{ stats.pending_approvals }}</h2>
                     </div>
-                    <div class="text-warning" style="font-size: 2.5rem;">
+                    <div class="dashboard-card-icon">
                         <i class="fas fa-clock"></i>
                     </div>
                 </div>
@@ -46,14 +48,14 @@
     
     <!-- Aprovadas -->
     <div class="col-md-3">
-        <div class="card border-success">
+        <div class="card dashboard-card dashboard-card-success">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted mb-2">Aprovadas</h6>
-                        <h2 class="mb-0 text-success">{{ stats.approved_reviews }}</h2>
+                        <h2 class="mb-0 dashboard-card-number">{{ stats.approved_reviews }}</h2>
                     </div>
-                    <div class="text-success" style="font-size: 2.5rem;">
+                    <div class="dashboard-card-icon">
                         <i class="fas fa-check-circle"></i>
                     </div>
                 </div>
@@ -63,14 +65,14 @@
     
     <!-- Em Revisão -->
     <div class="col-md-3">
-        <div class="card border-info">
+        <div class="card dashboard-card dashboard-card-info">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted mb-2">Em Revisão</h6>
-                        <h2 class="mb-0 text-info">{{ stats.in_review }}</h2>
+                        <h2 class="mb-0 dashboard-card-number">{{ stats.in_review }}</h2>
                     </div>
-                    <div class="text-info" style="font-size: 2.5rem;">
+                    <div class="dashboard-card-icon">
                         <i class="fas fa-edit"></i>
                     </div>
                 </div>
@@ -83,15 +85,15 @@
 <div class="row g-4 mb-4">
     <!-- Revisões Recentes (30 dias) -->
     <div class="col-md-6">
-        <div class="card border-secondary">
+        <div class="card dashboard-card dashboard-card-secondary">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted mb-2">Revisões Recentes (30 dias)</h6>
-                        <h2 class="mb-0">{{ stats.recent_reviews }}</h2>
+                        <h2 class="mb-0 dashboard-card-number">{{ stats.recent_reviews }}</h2>
                         <small class="text-muted">Últimos 30 dias</small>
                     </div>
-                    <div class="text-secondary" style="font-size: 2.5rem;">
+                    <div class="dashboard-card-icon">
                         <i class="fas fa-calendar-alt"></i>
                     </div>
                 </div>
@@ -101,15 +103,15 @@
     
     <!-- Total de Documentos -->
     <div class="col-md-6">
-        <div class="card border-dark">
+        <div class="card dashboard-card dashboard-card-dark">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted mb-2">Total de Documentos</h6>
-                        <h2 class="mb-0">{{ stats.total_documents }}</h2>
+                        <h2 class="mb-0 dashboard-card-number">{{ stats.total_documents }}</h2>
                         <small class="text-muted">Documentos únicos</small>
                     </div>
-                    <div class="text-dark" style="font-size: 2.5rem;">
+                    <div class="dashboard-card-icon">
                         <i class="fas fa-folder-open"></i>
                     </div>
                 </div>
@@ -145,7 +147,9 @@
                         <td>{{ review.reviewer_name }}</td>
                         <td>{{ review.review_date.strftime('%d/%m/%Y %H:%M') if review.review_date else 'N/A' }}</td>
                         <td>
-                            {% if review.pending_approvals > 0 %}
+                            {% if review.rejected_count > 0 %}
+                                <span class="badge bg-danger">Rejeitada</span>
+                            {% elif review.pending_approvals > 0 %}
                                 <span class="badge bg-warning">Pendente</span>
                             {% elif review.approved_count > 0 %}
                                 <span class="badge bg-success">Aprovada</span>

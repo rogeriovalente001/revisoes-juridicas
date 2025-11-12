@@ -104,10 +104,12 @@ def get_review_approvals(review_id: int) -> List[dict]:
 
 
 def get_approval_by_token(review_id: int, approver_email: str) -> Optional[dict]:
-    """Obtém aprovação pendente por email do aprovador"""
+    """Obtém aprovação pendente por email do aprovador (comparação case-insensitive)"""
     return fetchone("""
         SELECT * FROM revisoes_juridicas.review_approvals
-        WHERE review_id = %s AND approver_email = %s AND status = 'pending'
+        WHERE review_id = %s 
+        AND LOWER(approver_email) = LOWER(%s) 
+        AND status = 'pending'
         ORDER BY created_at DESC
         LIMIT 1
     """, (review_id, approver_email))

@@ -54,8 +54,9 @@ def create_app(config_object: type[Config] | None = None) -> Flask:
     from .extensions import login_manager
     login_manager.init_app(app)
     login_manager.login_view = 'auth.connect_auth'
-    login_manager.login_message = 'Por favor, faça login para acessar esta página.'
-    login_manager.login_message_category = 'info'
+    # Desabilitar mensagem automática do Flask-Login para não interferir no fluxo do Connect
+    login_manager.login_message = None
+    login_manager.login_message_category = None
     
     # Configurar CSRF protection
     from flask_wtf.csrf import CSRFProtect
@@ -99,6 +100,13 @@ def create_app(config_object: type[Config] | None = None) -> Flask:
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
+        
+        # Disable cache in development
+        if app.config.get('DEBUG'):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        
         return response
     
     # Template helpers
