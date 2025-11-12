@@ -65,7 +65,7 @@ def create_app(config_object: type[Config] | None = None) -> Flask:
     from .models import load_user  # noqa: F401
 
     # Register blueprints
-    from .blueprints.auth.routes import bp as auth_bp
+    from .blueprints.auth.routes import bp as auth_bp, connect_auth
     from .blueprints.reviews.routes import bp as reviews_bp
     from .blueprints.documents.routes import bp as documents_bp
     
@@ -73,13 +73,24 @@ def create_app(config_object: type[Config] | None = None) -> Flask:
     app.register_blueprint(reviews_bp, url_prefix='/reviews')
     app.register_blueprint(documents_bp, url_prefix='/documents')
     
+    # Exempt rota de autenticação do Connect (recebe tokens de sistemas externos)
+    # Esta rota precisa estar isenta de CSRF pois recebe requisições do Connect
+    csrf.exempt(connect_auth)
+    
+    # Rota de health check para validação do Connect
+    @app.route('/health')
+    def health_check():
+        """Health check endpoint para validação do Connect"""
+        from flask import jsonify
+        return jsonify({'status': 'ok', 'service': 'revisoes_juridicas'}), 200
+    
     # Rota raiz - redirecionar para login
     @app.route('/')
     def root():
         from flask import redirect, url_for
         from flask_login import current_user
         if current_user and current_user.is_authenticated:
-            return redirect(url_for('reviews.list'))
+            return redirect(url_for('reviews.dashboard'))
         return redirect(url_for('auth.connect_auth'))
     
     # Security headers

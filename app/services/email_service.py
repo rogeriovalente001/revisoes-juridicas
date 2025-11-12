@@ -72,10 +72,10 @@ class EmailService:
                                     <div style="background-color: #f8f9fa; border-left: 4px solid #8B5CF6; padding: 20px; margin: 20px 0; border-radius: 4px;">
                                         <h3 style="margin: 0 0 10px 0; font-size: 18px; color: #333;">Informações do Documento</h3>
                                         <p style="margin: 5px 0;"><strong>Título:</strong> {review_data.get('title', 'N/A')}</p>
-                                        <p style="margin: 5px 0;"><strong>Resumo:</strong> {review_data.get('summary', 'N/A')}</p>
-                                        <p style="margin: 5px 0;"><strong>Versão:</strong> {review_data.get('version', 'N/A')}</p>
+                                        <p style="margin: 5px 0;"><strong>Descrição:</strong> {str(review_data.get('description', 'N/A'))[:200]}{'...' if review_data.get('description') and len(str(review_data.get('description', ''))) > 200 else ''}</p>
+                                        <p style="margin: 5px 0;"><strong>Versão:</strong> v{review_data.get('version', 'N/A')}</p>
                                         <p style="margin: 5px 0;"><strong>Revisor:</strong> {review_data.get('reviewer_name', 'N/A')}</p>
-                                        <p style="margin: 5px 0;"><strong>Data da Revisão:</strong> {review_data.get('review_date', 'N/A')}</p>
+                                        <p style="margin: 5px 0;"><strong>Data da Revisão:</strong> {review_data.get('review_date').strftime('%d/%m/%Y %H:%M:%S') if review_data.get('review_date') and hasattr(review_data.get('review_date'), 'strftime') else str(review_data.get('review_date', 'N/A'))}</p>
                                     </div>
                                     
                                     <div style="text-align: center; padding: 25px 0;">

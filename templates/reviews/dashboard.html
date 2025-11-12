@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Revisões Jurídicas{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h1><i class="fas fa-chart-line"></i> Dashboard</h1>
+    <p class="text-muted">Visão geral das revisões jurídicas</p>
+</div>
+
+<!-- Cards de Estatísticas -->
+<div class="row g-4 mb-4">
+    <!-- Total de Revisões -->
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total de Revisões</h6>
+                        <h2 class="mb-0 text-primary">{{ stats.total_reviews }}</h2>
+                    </div>
+                    <div class="text-primary" style="font-size: 2.5rem;">
+                        <i class="fas fa-file-contract"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pendentes de Aprovação -->
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Pendentes de Aprovação</h6>
+                        <h2 class="mb-0 text-warning">{{ stats.pending_approvals }}</h2>
+                    </div>
+                    <div class="text-warning" style="font-size: 2.5rem;">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aprovadas -->
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Aprovadas</h6>
+                        <h2 class="mb-0 text-success">{{ stats.approved_reviews }}</h2>
+                    </div>
+                    <div class="text-success" style="font-size: 2.5rem;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Em Revisão -->
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Em Revisão</h6>
+                        <h2 class="mb-0 text-info">{{ stats.in_review }}</h2>
+                    </div>
+                    <div class="text-info" style="font-size: 2.5rem;">
+                        <i class="fas fa-edit"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Segunda Linha de Estatísticas -->
+<div class="row g-4 mb-4">
+    <!-- Revisões Recentes (30 dias) -->
+    <div class="col-md-6">
+        <div class="card border-secondary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Revisões Recentes (30 dias)</h6>
+                        <h2 class="mb-0">{{ stats.recent_reviews }}</h2>
+                        <small class="text-muted">Últimos 30 dias</small>
+                    </div>
+                    <div class="text-secondary" style="font-size: 2.5rem;">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Total de Documentos -->
+    <div class="col-md-6">
+        <div class="card border-dark">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total de Documentos</h6>
+                        <h2 class="mb-0">{{ stats.total_documents }}</h2>
+                        <small class="text-muted">Documentos únicos</small>
+                    </div>
+                    <div class="text-dark" style="font-size: 2.5rem;">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Revisões Recentes -->
+{% if recent_reviews %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-history"></i> Revisões Recentes</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Versão</th>
+                        <th>Revisor</th>
+                        <th>Data</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for review in recent_reviews %}
+                    <tr>
+                        <td>{{ review.title }}</td>
+                        <td>v{{ review.version }}</td>
+                        <td>{{ review.reviewer_name }}</td>
+                        <td>{{ review.review_date.strftime('%d/%m/%Y %H:%M') if review.review_date else 'N/A' }}</td>
+                        <td>
+                            {% if review.pending_approvals > 0 %}
+                                <span class="badge bg-warning">Pendente</span>
+                            {% elif review.approved_count > 0 %}
+                                <span class="badge bg-success">Aprovada</span>
+                            {% else %}
+                                <span class="badge bg-info">Em Revisão</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1 flex-wrap">
+                                <a href="{{ url_for('reviews.detail', review_id=review.id) }}" class="btn btn-sm btn-info" title="Ver Detalhes">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if current_user.can_edit() %}
+                                <form method="POST" action="{{ url_for('reviews.submit_approval', review_id=review.id) }}" style="display: inline;" onsubmit="return confirm('Deseja submeter esta revisão à aprovação?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-warning" title="Submeter à Aprovação">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </form>
+                                <a href="{{ url_for('reviews.manage_viewers', review_id=review.id) }}" class="btn btn-sm btn-info" title="Gerenciar Visualizadores">
+                                    <i class="fas fa-users"></i>
+                                </a>
+                                <a href="{{ url_for('reviews.edit', review_id=review.id) }}" class="btn btn-sm btn-warning" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                {% if current_user.can_delete() %}
+                                <form method="POST" action="{{ url_for('reviews.delete', review_id=review.id) }}" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja excluir esta revisão?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Excluir">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="text-center mt-3">
+            <a href="{{ url_for('reviews.manage') }}" class="btn btn-primary">
+                <i class="fas fa-list me-2"></i>Ver Todas as Revisões
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Ações Rápidas -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-bolt"></i> Ações Rápidas</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <a href="{{ url_for('reviews.manage') }}" class="btn btn-primary w-100">
+                    <i class="fas fa-cog me-2"></i>Gerenciar Revisões
+                </a>
+            </div>
+            {% if current_user.can_edit() %}
+            <div class="col-md-4">
+                <a href="{{ url_for('reviews.new') }}" class="btn btn-success w-100">
+                    <i class="fas fa-plus me-2"></i>Nova Revisão
+                </a>
+            </div>
+            {% endif %}
+            <div class="col-md-4">
+                <a href="{{ url_for('reviews.manage', status='pending') }}" class="btn btn-warning w-100">
+                    <i class="fas fa-clock me-2"></i>Ver Pendentes
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

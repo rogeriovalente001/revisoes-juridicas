@@ -34,7 +34,7 @@ class Config:
     DATABASE_URL = os.environ.get('DATABASE_URL')
     DB_HOST = os.environ.get('DB_HOST', 'localhost')
     DB_PORT = os.environ.get('DB_PORT', '5433')
-    DB_NAME = os.environ.get('DB_NAME', 'argo_connect_db')
+    DB_NAME = os.environ.get('DB_NAME', 'revisoes_juridicas_db')
     DB_USER = os.environ.get('DB_USER')
     DB_PASSWORD = os.environ.get('DB_PASSWORD')
     DB_SCHEMA = 'revisoes_juridicas'

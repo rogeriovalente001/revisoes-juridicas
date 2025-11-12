@@ -5,7 +5,9 @@ Rotas de revisões
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import login_required, current_user
 from app.repositories import reviews_repository, review_viewers_repository, review_approvals_repository, review_documents_repository
-from app.services import connect_api_service, email_service, export_service
+from app.services.connect_api_service import connect_api_service
+from app.services.email_service import email_service
+from app.services.export_service import export_service
 from app.utils.file_upload import validate_file, save_uploaded_file
 from app.utils.security import require_action
 import os
@@ -18,8 +20,18 @@ bp = Blueprint('reviews', __name__)
 @bp.route('/')
 @login_required
 @require_action('view')
-def list():
-    """Lista revisões com filtros"""
+def dashboard():
+    """Dashboard principal com estatísticas de revisões"""
+    stats = reviews_repository.get_dashboard_stats(current_user.email)
+    recent_reviews = reviews_repository.get_recent_reviews_list(current_user.email, limit=5)
+    return render_template('reviews/dashboard.html', stats=stats, recent_reviews=recent_reviews)
+
+
+@bp.route('/manage')
+@login_required
+@require_action('view')
+def manage():
+    """Lista revisões com filtros (Gerenciamento de Revisões)"""
     filters = {
         'status': request.args.get('status'),
         'search': request.args.get('search'),
@@ -29,10 +41,11 @@ def list():
     
     reviews = reviews_repository.list_reviews(current_user.email, filters)
     
-    # Obter lista de usuários para filtros
-    users = connect_api_service.get_users()
+    # Obter apenas aprovadores e responsáveis que têm revisões
+    approvers = reviews_repository.get_approvers_with_reviews(current_user.email)
+    reviewers = reviews_repository.get_reviewers_with_reviews(current_user.email)
     
-    return render_template('reviews/list.html', reviews=reviews, filters=filters, users=users)
+    return render_template('reviews/list.html', reviews=reviews, filters=filters, approvers=approvers, reviewers=reviewers)
 
 
 @bp.route('/new', methods=['GET', 'POST'])
@@ -45,7 +58,7 @@ def new():
             # Validar dados
             document_data = {
                 'title': request.form.get('title', '').strip(),
-                'summary': request.form.get('summary', '').strip(),
+                'summary': '',  # Campo removido - sempre vazio
                 'description': request.form.get('description', '').strip()
             }
             
@@ -75,6 +88,9 @@ def new():
                 current_user.email, current_user.name
             )
             
+            # Adicionar criador automaticamente como viewer
+            review_viewers_repository.add_viewers(review_id, [current_user.email])
+            
             # Processar uploads
             if 'files' in request.files:
                 files = request.files.getlist('files')
@@ -83,10 +99,17 @@ def new():
                         if validate_file(file):
                             save_uploaded_file(file, review_id, current_user.email)
             
+            # Redirecionar para seleção de visualizadores (fluxo original)
             flash('Revisão criada com sucesso!', 'success')
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f'Revisão {review_id} criada com sucesso. Redirecionando para select_viewers.')
             return redirect(url_for('reviews.select_viewers', review_id=review_id))
             
         except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Erro ao criar revisão: {str(e)}', exc_info=True)
             flash(f'Erro ao criar revisão: {str(e)}', 'error')
     
     return render_template('reviews/form.html', review=None)
@@ -101,13 +124,13 @@ def edit(review_id):
     
     if not review:
         flash('Revisão não encontrada ou sem permissão', 'error')
-        return redirect(url_for('reviews.list'))
+        return redirect(url_for('reviews.manage'))
     
     if request.method == 'POST':
         try:
             document_data = {
                 'title': request.form.get('title', '').strip(),
-                'summary': request.form.get('summary', '').strip(),
+                'summary': '',  # Campo removido - sempre vazio
                 'description': request.form.get('description', '').strip()
             }
             
@@ -136,7 +159,7 @@ def edit(review_id):
             )
             
             flash('Revisão atualizada com sucesso!', 'success')
-            return redirect(url_for('reviews.list'))
+            return redirect(url_for('reviews.manage'))
             
         except Exception as e:
             flash(f'Erro ao atualizar revisão: {str(e)}', 'error')
@@ -160,7 +183,7 @@ def detail(review_id):
     
     if not review:
         flash('Revisão não encontrada ou sem permissão', 'error')
-        return redirect(url_for('reviews.list'))
+        return redirect(url_for('reviews.manage'))
     
     # Carregar dados relacionados
     risks = reviews_repository.get_review_risks(review_id)
@@ -186,7 +209,7 @@ def delete(review_id):
     
     if not review:
         flash('Revisão não encontrada ou sem permissão', 'error')
-        return redirect(url_for('reviews.list'))
+        return redirect(url_for('reviews.manage'))
     
     try:
         # Excluir arquivos do servidor
@@ -201,7 +224,72 @@ def delete(review_id):
     except Exception as e:
         flash(f'Erro ao excluir revisão: {str(e)}', 'error')
     
-    return redirect(url_for('reviews.list'))
+    return redirect(url_for('reviews.manage'))
+
+
+@bp.route('/pending-approvals')
+@login_required
+@require_action('view')
+def pending_approvals():
+    """Lista revisões pendentes de aprovação do usuário logado"""
+    reviews = reviews_repository.get_pending_approvals_for_user(current_user.email)
+    return render_template('reviews/pending_approvals.html', reviews=reviews)
+
+
+@bp.route('/<int:review_id>/submit-approval', methods=['POST'])
+@login_required
+@require_action('edit')
+def submit_approval(review_id):
+    """Submete revisão à aprovação sem criar nova versão"""
+    review = reviews_repository.get_review_by_id(review_id, current_user.email)
+    
+    if not review:
+        flash('Revisão não encontrada ou sem permissão', 'error')
+        return redirect(url_for('reviews.manage'))
+    
+    # Redirecionar para tela de escolha de aprovadores
+    return redirect(url_for('reviews.request_approval', review_id=review_id))
+
+
+@bp.route('/<int:review_id>/manage-viewers', methods=['GET', 'POST'])
+@login_required
+@require_action('edit')
+def manage_viewers(review_id):
+    """Gerencia visualizadores de uma revisão sem editar"""
+    review = reviews_repository.get_review_by_id(review_id, current_user.email)
+    
+    if not review:
+        flash('Revisão não encontrada ou sem permissão', 'error')
+        return redirect(url_for('reviews.manage'))
+    
+    if request.method == 'POST':
+        viewer_emails = request.form.getlist('viewers[]')
+        
+        # Sempre incluir o criador da revisão como viewer
+        if current_user.email not in viewer_emails:
+            viewer_emails.append(current_user.email)
+        
+        if viewer_emails:
+            review_viewers_repository.add_viewers(review_id, viewer_emails)
+            flash('Visualizadores atualizados com sucesso!', 'success')
+            return redirect(url_for('reviews.detail', review_id=review_id))
+        else:
+            flash('Selecione pelo menos um visualizador', 'error')
+    
+    # Obter lista de usuários do Connect
+    try:
+        users = connect_api_service.get_users(request_context=request)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Erro ao obter lista de usuários: {str(e)}', exc_info=True)
+        users = []
+        flash('Erro ao carregar lista de usuários. Tente novamente.', 'error')
+    
+    current_viewers = review_viewers_repository.get_viewers(review_id)
+    viewer_emails = [v['user_email'] for v in current_viewers]
+    
+    return render_template('reviews/manage_viewers.html', review=review, users=users, viewer_emails=viewer_emails)
 
 
 @bp.route('/<int:review_id>/select-viewers', methods=['GET', 'POST'])
@@ -209,30 +297,81 @@ def delete(review_id):
 @require_action('edit')
 def select_viewers(review_id):
     """Seleciona visualizadores da revisão"""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f'Acessando select_viewers para revisão {review_id} - usuário: {current_user.email}')
+    
     review = reviews_repository.get_review_by_id(review_id, current_user.email)
     
     if not review:
+        logger.warning(f'Revisão {review_id} não encontrada para usuário {current_user.email}')
         flash('Revisão não encontrada', 'error')
-        return redirect(url_for('reviews.list'))
+        return redirect(url_for('reviews.manage'))
     
     if request.method == 'POST':
         viewer_emails = request.form.getlist('viewers[]')
+        
+        # Sempre incluir o criador da revisão como viewer
+        if current_user.email not in viewer_emails:
+            viewer_emails.append(current_user.email)
         
         if viewer_emails:
             review_viewers_repository.add_viewers(review_id, viewer_emails)
             flash('Visualizadores definidos com sucesso!', 'success')
             
-            # Perguntar se quer enviar para aprovação
-            return redirect(url_for('reviews.request_approval', review_id=review_id))
+            # Redirecionar para tela de escolha (enviar para aprovação ou não)
+            return redirect(url_for('reviews.choose_approval', review_id=review_id))
         else:
             flash('Selecione pelo menos um visualizador', 'error')
     
-    # Obter lista de usuários
-    users = connect_api_service.get_users()
+    # Obter lista de usuários do Connect
+    try:
+        # Passar contexto da requisição para incluir cookies de sessão
+        users = connect_api_service.get_users(request_context=request)
+        logger.info(f'Lista de usuários obtida: {len(users)} usuários')
+        if len(users) == 0:
+            logger.warning('Lista de usuários vazia - verifique se o Connect está acessível e autenticado')
+            flash('Nenhum usuário encontrado. Verifique a conexão com o Connect.', 'warning')
+    except Exception as e:
+        logger.error(f'Erro ao obter lista de usuários: {str(e)}', exc_info=True)
+        users = []
+        flash('Erro ao carregar lista de usuários. Tente novamente.', 'error')
+    
     current_viewers = review_viewers_repository.get_viewers(review_id)
     viewer_emails = [v['user_email'] for v in current_viewers]
+    logger.info(f'Visualizadores atuais: {viewer_emails}')
     
     return render_template('reviews/select_viewers.html', review=review, users=users, viewer_emails=viewer_emails)
+
+
+@bp.route('/<int:review_id>/choose-approval', methods=['GET', 'POST'])
+@login_required
+@require_action('edit')
+def choose_approval(review_id):
+    """Tela intermediária para escolher se deseja enviar para aprovação"""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f'Acessando choose_approval para revisão {review_id} - usuário: {current_user.email}')
+    
+    review = reviews_repository.get_review_by_id(review_id, current_user.email)
+    
+    if not review:
+        logger.warning(f'Revisão {review_id} não encontrada para usuário {current_user.email}')
+        flash('Revisão não encontrada', 'error')
+        return redirect(url_for('reviews.manage'))
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'yes':
+            # Usuário escolheu enviar para aprovação
+            return redirect(url_for('reviews.request_approval', review_id=review_id))
+        elif action == 'no':
+            # Usuário escolheu não enviar para aprovação agora
+            flash('Revisão criada com sucesso! Você pode solicitar aprovação mais tarde.', 'success')
+            return redirect(url_for('reviews.detail', review_id=review_id))
+    
+    return render_template('reviews/choose_approval.html', review=review)
 
 
 @bp.route('/<int:review_id>/request-approval', methods=['GET', 'POST'])
@@ -240,11 +379,16 @@ def select_viewers(review_id):
 @require_action('edit')
 def request_approval(review_id):
     """Solicita aprovação da revisão"""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f'Acessando request_approval para revisão {review_id} - usuário: {current_user.email}')
+    
     review = reviews_repository.get_review_by_id(review_id, current_user.email)
     
     if not review:
+        logger.warning(f'Revisão {review_id} não encontrada para usuário {current_user.email}')
         flash('Revisão não encontrada', 'error')
-        return redirect(url_for('reviews.list'))
+        return redirect(url_for('reviews.manage'))
     
     if request.method == 'POST':
         approver_emails = request.form.getlist('approvers[]')
@@ -261,8 +405,8 @@ def request_approval(review_id):
                 base_url = request.host_url.rstrip('/')
                 
                 for approver_email in approver_emails:
-                    # Buscar nome do aprovador
-                    users = connect_api_service.get_users()
+                    # Buscar nome do aprovador do Connect
+                    users = connect_api_service.get_users(request_context=request)
                     approver_name = next((u.get('name', approver_email) for u in users if u.get('email') == approver_email), approver_email)
                     
                     # Gerar token de aprovação
@@ -284,97 +428,119 @@ def request_approval(review_id):
         else:
             flash('Selecione pelo menos um aprovador', 'error')
     
-    # Obter lista de usuários
-    users = connect_api_service.get_users()
+    # Obter lista de usuários do Connect
+    try:
+        # Passar contexto da requisição para incluir cookies de sessão
+        users = connect_api_service.get_users(request_context=request)
+        logger.info(f'Lista de usuários obtida para aprovação: {len(users)} usuários')
+        if len(users) == 0:
+            logger.warning('Lista de usuários vazia para aprovação - verifique se o Connect está acessível e autenticado')
+            flash('Nenhum usuário encontrado. Verifique a conexão com o Connect.', 'warning')
+    except Exception as e:
+        logger.error(f'Erro ao obter lista de usuários: {str(e)}', exc_info=True)
+        users = []
+        flash('Erro ao carregar lista de usuários. Tente novamente.', 'error')
     
     return render_template('reviews/request_approval.html', review=review, users=users)
 
 
 @bp.route('/<int:review_id>/approve', methods=['GET', 'POST'])
+@login_required
 def approve(review_id):
     """Aprova ou rejeita revisão"""
-    token = request.args.get('token') or request.form.get('token')
+    # Se usuário está logado, usar email do usuário logado
+    # Caso contrário, tentar obter do token
+    approver_email = None
     
-    if not token:
-        flash('Token de aprovação não fornecido', 'error')
-        return redirect(url_for('auth.connect_auth'))
+    if current_user.is_authenticated:
+        # Usuário logado - usar email dele
+        approver_email = current_user.email
+    else:
+        # Tentar obter do token (para links de email)
+        token = request.args.get('token') or request.form.get('token')
+        if token:
+            try:
+                from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+                serializer = URLSafeTimedSerializer(os.getenv('SECRET_KEY'))
+                token_data = serializer.loads(token, max_age=86400)  # 24 horas
+                approver_email = token_data.get('approver_email')
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Erro ao decodificar token: {str(e)}")
     
-    try:
-        from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-        serializer = URLSafeTimedSerializer(os.getenv('SECRET_KEY'))
-        token_data = serializer.loads(token, max_age=86400)  # 24 horas
+    # Se não conseguiu obter email, tentar do parâmetro
+    if not approver_email:
+        approver_email = request.args.get('approver_email') or request.form.get('approver_email')
+    
+    if not approver_email:
+        flash('Aprovador não identificado. Faça login ou use o link do email.', 'error')
+        return redirect(url_for('reviews.pending_approvals'))
+    
+    # Obter revisão (sem verificar permissão de visualização para aprovadores)
+    from app.db import fetchone
+    review = fetchone("""
+        SELECT r.*, d.title, d.summary, d.description
+        FROM revisoes_juridicas.reviews r
+        INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
+        WHERE r.id = %s
+    """, (review_id,))
+    
+    if not review:
+        flash('Revisão não encontrada', 'error')
+        return redirect(url_for('reviews.pending_approvals'))
+    
+    # Verificar se há aprovação pendente
+    approval = review_approvals_repository.get_approval_by_token(review_id, approver_email)
+    
+    if not approval or approval['status'] != 'pending':
+        flash('Aprovação não encontrada ou já processada', 'error')
+        return redirect(url_for('reviews.pending_approvals'))
+    
+    # Carregar dados completos da revisão
+    risks = reviews_repository.get_review_risks(review_id)
+    observations = reviews_repository.get_review_observations(review_id)
+    approvals = review_approvals_repository.get_review_approvals(review_id)
+    
+    review['risks'] = risks
+    review['observations'] = observations.get('observations', '') if observations else ''
+    review['approvals'] = approvals
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        comments = request.form.get('comments', '').strip()
         
-        approver_email = token_data.get('approver_email')
+        if not comments:
+            flash('Comentário é obrigatório', 'error')
+            return render_template('reviews/approve.html', review=review, approval=approval, approver_email=approver_email)
         
-        if not approver_email:
-            flash('Token inválido', 'error')
-            return redirect(url_for('auth.connect_auth'))
+        # Buscar nome do aprovador do Connect
+        users = connect_api_service.get_users(request_context=request)
+        approver_name = next((u.get('name', approver_email) for u in users if u.get('email') == approver_email), approver_email)
         
-        # Obter revisão (sem verificar permissão de visualização para aprovadores)
-        from app.db import fetchone
-        review = fetchone("""
-            SELECT r.*, d.title, d.summary, d.description
-            FROM revisoes_juridicas.reviews r
-            INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
-            WHERE r.id = %s
-        """, (review_id,))
+        if action == 'approve':
+            review_approvals_repository.approve_review(review_id, approver_email, approver_name, comments)
+            status = 'approved'
+        elif action == 'reject':
+            review_approvals_repository.reject_review(review_id, approver_email, approver_name, comments)
+            status = 'rejected'
+        else:
+            flash('Ação inválida', 'error')
+            return render_template('reviews/approve.html', review=review, approval=approval, approver_email=approver_email)
         
-        if not review:
-            flash('Revisão não encontrada', 'error')
-            return redirect(url_for('auth.connect_auth'))
+        # Enviar email de confirmação ao responsável pela revisão
+        reviewer_email = review.get('reviewer_email')
+        reviewer_name = review.get('reviewer_name')
         
-        # Verificar se há aprovação pendente
-        approval = review_approvals_repository.get_approval_by_token(review_id, approver_email)
+        if reviewer_email:
+            email_service.send_approval_confirmation_email(
+                reviewer_email, reviewer_name, approver_name, review, status, comments
+            )
         
-        if not approval or approval['status'] != 'pending':
-            flash('Aprovação não encontrada ou já processada', 'error')
-            return redirect(url_for('auth.connect_auth'))
-        
-        if request.method == 'POST':
-            action = request.form.get('action')
-            comments = request.form.get('comments', '').strip()
-            
-            if not comments:
-                flash('Comentário é obrigatório', 'error')
-                return render_template('reviews/approve.html', review=review, approval=approval, approver_email=approver_email)
-            
-            # Buscar nome do aprovador
-            users = connect_api_service.get_users()
-            approver_name = next((u.get('name', approver_email) for u in users if u.get('email') == approver_email), approver_email)
-            
-            if action == 'approve':
-                review_approvals_repository.approve_review(review_id, approver_email, approver_name, comments)
-                status = 'approved'
-            elif action == 'reject':
-                review_approvals_repository.reject_review(review_id, approver_email, approver_name, comments)
-                status = 'rejected'
-            else:
-                flash('Ação inválida', 'error')
-                return render_template('reviews/approve.html', review=review, approval=approval, approver_email=approver_email)
-            
-            # Enviar email de confirmação
-            reviewer_email = review.get('reviewer_email')
-            reviewer_name = review.get('reviewer_name')
-            
-            if reviewer_email:
-                email_service.send_approval_confirmation_email(
-                    reviewer_email, reviewer_name, approver_name, review, status, comments
-                )
-            
-            flash(f'Revisão {status} com sucesso!', 'success')
-            return render_template('reviews/approval_result.html', status=status, comments=comments)
-        
-        return render_template('reviews/approve.html', review=review, approval=approval, approver_email=approver_email)
-        
-    except SignatureExpired:
-        flash('Token de aprovação expirado', 'error')
-        return redirect(url_for('auth.connect_auth'))
-    except BadSignature:
-        flash('Token de aprovação inválido', 'error')
-        return redirect(url_for('auth.connect_auth'))
-    except Exception as e:
-        flash(f'Erro ao processar aprovação: {str(e)}', 'error')
-        return redirect(url_for('auth.connect_auth'))
+        flash(f'Revisão {status} com sucesso!', 'success')
+        return redirect(url_for('reviews.pending_approvals'))
+    
+    return render_template('reviews/approve.html', review=review, approval=approval, approver_email=approver_email)
 
 
 @bp.route('/<int:review_id>/export')
@@ -386,7 +552,7 @@ def export(review_id):
     
     if not review:
         flash('Revisão não encontrada ou sem permissão', 'error')
-        return redirect(url_for('reviews.list'))
+        return redirect(url_for('reviews.manage'))
     
     format_type = request.args.get('format', 'pdf').lower()
     

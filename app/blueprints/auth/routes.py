@@ -20,7 +20,7 @@ def connect_auth():
         # Se já está autenticado, redirecionar
         from flask_login import current_user
         if current_user and current_user.is_authenticated:
-            return redirect(url_for('reviews.list'))
+            return redirect(url_for('reviews.dashboard'))
         
         # Se não tem token, mostrar mensagem
         return redirect(url_for('auth.connect_auth'))
@@ -40,7 +40,14 @@ def connect_auth():
         user_email = token_data.get('user_email')
         user_name = token_data.get('user_name')
         profile_name = token_data.get('profile_name', 'Usuário')
-        actions = token_data.get('actions', [])
+        
+        # Se 'actions' não existe no token ou é None ou lista vazia, significa que não foram enviadas ações
+        # Nesse caso, passar None para permitir todas as ações
+        # Se 'actions' existe e tem valores, usar essas ações específicas
+        actions = token_data.get('actions')
+        if actions is None or (isinstance(actions, list) and len(actions) == 0):
+            # Ações não foram enviadas - tratar como None (todas as ações permitidas)
+            actions = None
         
         if not user_email:
             flash('Token inválido: email não encontrado', 'error')
@@ -54,19 +61,33 @@ def connect_auth():
             actions=actions
         )
         
-        # Salvar dados na sessão
+        # Debug: log das ações recebidas (apenas em desenvolvimento)
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Usuário autenticado: {user_email} - Ações recebidas: {actions} - Has all permissions: {user.has_all_permissions} - Can edit: {user.can_edit()}")
+        
+        # Salvar dados na sessão (salvar None se actions for None para manter consistência)
         session['user_data'] = {
             'email': user_email,
             'name': user_name,
             'profile_name': profile_name,
-            'actions': actions
+            'actions': actions  # Pode ser None se não houver ações
         }
+        
+        # Salvar URL de retorno se presente no token
+        return_url = token_data.get('return_url')
+        if return_url:
+            session['return_url'] = return_url
         
         # Fazer login
         login_user(user, remember=True)
         
-        flash(f'Bem-vindo, {user_name}!', 'success')
-        return redirect(url_for('reviews.list'))
+        # Verificar se já exibiu mensagem de boas-vindas nesta sessão
+        if not session.get('welcome_message_shown', False):
+            flash(f'Bem-vindo, {user_name}!', 'success')
+            session['welcome_message_shown'] = True
+        
+        return redirect(url_for('reviews.dashboard'))
         
     except ValueError as e:
         flash(f'Erro na autenticação: {str(e)}', 'error')
@@ -78,9 +99,19 @@ def connect_auth():
 
 @bp.route('/logout')
 def logout():
-    """Fazer logout"""
+    """Fazer logout e redirecionar para tela de origem no Connect"""
+    from flask import current_app
+    
+    # Obter URL de retorno da sessão antes de limpar
+    return_url = session.get('return_url')
+    
     logout_user()
     session.clear()
-    flash('Logout realizado com sucesso', 'info')
-    return redirect(url_for('auth.connect_auth'))
+    
+    # Redirecionar para URL de retorno ou página principal do Connect
+    if return_url:
+        return redirect(return_url)
+    else:
+        connect_url = current_app.config.get('CONNECT_URL', 'http://localhost:5001')
+        return redirect(connect_url)
 

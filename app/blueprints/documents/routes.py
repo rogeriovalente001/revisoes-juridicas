@@ -2,8 +2,8 @@
 Rotas para download de documentos
 """
 
-from flask import Blueprint, send_file, abort, current_user
-from flask_login import login_required
+from flask import Blueprint, send_file, abort
+from flask_login import login_required, current_user
 from app.repositories import review_documents_repository, review_viewers_repository
 import os
 

@@ -1,11 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}Lista de Revisões - Revisões Jurídicas{% endblock %}
+{% block title %}Gerenciamento de Revisões - Revisões Jurídicas{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="fas fa-list"></i> Revisões Jurídicas</h1>
-    {% if current_user.can_edit() %}
+    <div class="d-flex align-items-center gap-3">
+        <a href="{{ url_for('reviews.dashboard') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar ao Dashboard
+        </a>
+        <h1 class="mb-0"><i class="fas fa-cog"></i> Gerenciamento de Revisões</h1>
+    </div>
+    {% if current_user and current_user.can_edit() %}
     <a href="{{ url_for('reviews.new') }}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Nova Revisão
     </a>
@@ -15,7 +20,7 @@
 <!-- Filtros -->
 <div class="card mb-4">
     <div class="card-body">
-        <form method="GET" action="{{ url_for('reviews.list') }}">
+        <form method="GET" action="{{ url_for('reviews.manage') }}">
             <div class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label">Status</label>
@@ -27,22 +32,22 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Buscar (Título/Resumo)</label>
+                    <label class="form-label">Buscar (Título/Descrição)</label>
                     <input type="text" name="search" class="form-control" value="{{ filters.search or '' }}" placeholder="Digite para buscar...">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Aprovadores</label>
                     <select name="approvers" class="form-select" multiple>
-                        {% for user in users %}
-                        <option value="{{ user.email }}" {% if user.email in filters.approvers %}selected{% endif %}>{{ user.name }}</option>
+                        {% for approver in approvers %}
+                        <option value="{{ approver.email }}" {% if approver.email in filters.approvers %}selected{% endif %}>{{ approver.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Responsável</label>
                     <select name="reviewers" class="form-select" multiple>
-                        {% for user in users %}
-                        <option value="{{ user.email }}" {% if user.email in filters.reviewers %}selected{% endif %}>{{ user.name }}</option>
+                        {% for reviewer in reviewers %}
+                        <option value="{{ reviewer.email }}" {% if reviewer.email in filters.reviewers %}selected{% endif %}>{{ reviewer.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -52,7 +57,7 @@
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-search"></i> Filtrar
                     </button>
-                    <a href="{{ url_for('reviews.list') }}" class="btn btn-secondary">
+                    <a href="{{ url_for('reviews.manage') }}" class="btn btn-secondary">
                         <i class="fas fa-times"></i> Limpar
                     </a>
                 </div>
@@ -94,22 +99,33 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{{ url_for('reviews.detail', review_id=review.id) }}" class="btn btn-sm btn-info">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            {% if current_user.can_edit() %}
-                            <a href="{{ url_for('reviews.edit', review_id=review.id) }}" class="btn btn-sm btn-warning">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            {% endif %}
-                            {% if current_user.can_delete() %}
-                            <form method="POST" action="{{ url_for('reviews.delete', review_id=review.id) }}" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja excluir esta revisão?');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm btn-danger">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                            {% endif %}
+                            <div class="d-flex gap-1 flex-wrap">
+                                <a href="{{ url_for('reviews.detail', review_id=review.id) }}" class="btn btn-sm btn-info" title="Ver Detalhes">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if current_user.can_edit() %}
+                                <form method="POST" action="{{ url_for('reviews.submit_approval', review_id=review.id) }}" style="display: inline;" onsubmit="return confirm('Deseja submeter esta revisão à aprovação?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-warning" title="Submeter à Aprovação">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </form>
+                                <a href="{{ url_for('reviews.manage_viewers', review_id=review.id) }}" class="btn btn-sm btn-info" title="Gerenciar Visualizadores">
+                                    <i class="fas fa-users"></i>
+                                </a>
+                                <a href="{{ url_for('reviews.edit', review_id=review.id) }}" class="btn btn-sm btn-warning" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                {% if current_user.can_delete() %}
+                                <form method="POST" action="{{ url_for('reviews.delete', review_id=review.id) }}" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja excluir esta revisão?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Excluir">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

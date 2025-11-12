@@ -19,15 +19,15 @@ def require_action(action: str):
             
             if action == 'view' and not current_user.can_view():
                 flash('Você não tem permissão para visualizar', 'error')
-                return redirect(url_for('reviews.list'))
+                return redirect(url_for('reviews.dashboard'))
             
             if action == 'edit' and not current_user.can_edit():
                 flash('Você não tem permissão para editar', 'error')
-                return redirect(url_for('reviews.list'))
+                return redirect(url_for('reviews.dashboard'))
             
             if action == 'delete' and not current_user.can_delete():
                 flash('Você não tem permissão para excluir', 'error')
-                return redirect(url_for('reviews.list'))
+                return redirect(url_for('reviews.dashboard'))
             
             return f(*args, **kwargs)
         return decorated_function

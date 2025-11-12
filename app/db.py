@@ -41,7 +41,7 @@ def init_db_pool():
                     1, 20,
                     host=os.environ.get('DB_HOST', 'localhost'),
                     port=os.environ.get('DB_PORT', '5433'),
-                    database=os.environ.get('DB_NAME', 'argo_connect_db'),
+                    database=os.environ.get('DB_NAME', 'revisoes_juridicas_db'),
                     user=os.environ.get('DB_USER'),
                     password=os.environ.get('DB_PASSWORD')
                 )

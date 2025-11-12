@@ -30,10 +30,10 @@ def list_reviews(user_email: str, filters: Dict = None) -> List[Dict]:
         elif status == 'in_review':
             where_clauses.append("NOT EXISTS (SELECT 1 FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id)")
     
-    # Filtro por título/resumo
+    # Filtro por título/descrição
     if filters.get('search'):
         search_term = f"%{filters['search']}%"
-        where_clauses.append("(d.title ILIKE %s OR d.summary ILIKE %s)")
+        where_clauses.append("(d.title ILIKE %s OR d.description ILIKE %s)")
         params.extend([search_term, search_term])
     
     # Filtro por aprovadores
@@ -244,3 +244,170 @@ def get_review_observations(review_id: int) -> Optional[Dict]:
         WHERE review_id = %s
     """, (review_id,))
 
+
+def get_dashboard_stats(user_email: str) -> Dict:
+    """Obtém estatísticas para o dashboard - alinhado com a lógica de status da lista"""
+    stats = {}
+    
+    # Total de revisões que o usuário pode visualizar
+    result = fetchone("""
+        SELECT COUNT(DISTINCT r.id) as total
+        FROM revisoes_juridicas.reviews r
+        INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
+        INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
+        WHERE rv.user_email = %s AND rv.can_view = TRUE
+    """, (user_email,))
+    stats['total_reviews'] = result['total'] if result else 0
+    
+    # Revisões pendentes de aprovação (tem aprovação pendente)
+    result = fetchone("""
+        SELECT COUNT(DISTINCT r.id) as total
+        FROM revisoes_juridicas.reviews r
+        INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
+        INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
+        WHERE rv.user_email = %s AND rv.can_view = TRUE
+        AND EXISTS (
+            SELECT 1 FROM revisoes_juridicas.review_approvals ra 
+            WHERE ra.review_id = r.id AND ra.status = 'pending'
+        )
+    """, (user_email,))
+    stats['pending_approvals'] = result['total'] if result else 0
+    
+    # Revisões aprovadas (tem aprovação aprovada E não tem pendente)
+    result = fetchone("""
+        SELECT COUNT(DISTINCT r.id) as total
+        FROM revisoes_juridicas.reviews r
+        INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
+        INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
+        WHERE rv.user_email = %s AND rv.can_view = TRUE
+        AND EXISTS (
+            SELECT 1 FROM revisoes_juridicas.review_approvals ra 
+            WHERE ra.review_id = r.id AND ra.status = 'approved'
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM revisoes_juridicas.review_approvals ra2 
+            WHERE ra2.review_id = r.id AND ra2.status = 'pending'
+        )
+    """, (user_email,))
+    stats['approved_reviews'] = result['total'] if result else 0
+    
+    # Revisões em revisão (sem aprovações - nem pendente nem aprovada)
+    result = fetchone("""
+        SELECT COUNT(DISTINCT r.id) as total
+        FROM revisoes_juridicas.reviews r
+        INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
+        INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
+        WHERE rv.user_email = %s AND rv.can_view = TRUE
+        AND NOT EXISTS (
+            SELECT 1 FROM revisoes_juridicas.review_approvals ra 
+            WHERE ra.review_id = r.id
+        )
+    """, (user_email,))
+    stats['in_review'] = result['total'] if result else 0
+    
+    # Revisões criadas nos últimos 30 dias
+    result = fetchone("""
+        SELECT COUNT(DISTINCT r.id) as total
+        FROM revisoes_juridicas.reviews r
+        INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
+        INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
+        WHERE rv.user_email = %s AND rv.can_view = TRUE
+        AND r.review_date >= CURRENT_DATE - INTERVAL '30 days'
+    """, (user_email,))
+    stats['recent_reviews'] = result['total'] if result else 0
+    
+    # Total de documentos únicos
+    result = fetchone("""
+        SELECT COUNT(DISTINCT r.document_id) as total
+        FROM revisoes_juridicas.reviews r
+        INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
+        INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
+        WHERE rv.user_email = %s AND rv.can_view = TRUE
+    """, (user_email,))
+    stats['total_documents'] = result['total'] if result else 0
+    
+    return stats
+
+
+def get_recent_reviews_list(user_email: str, limit: int = 5) -> List[Dict]:
+    """Obtém lista de revisões recentes para o dashboard"""
+    return fetchall("""
+        SELECT 
+            r.id,
+            r.document_id,
+            r.version,
+            r.reviewer_email,
+            r.reviewer_name,
+            r.review_date,
+            r.comments,
+            r.created_at,
+            d.title,
+            d.summary,
+            d.description,
+            (SELECT COUNT(*) FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'pending') as pending_approvals,
+            (SELECT COUNT(*) FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'approved') as approved_count
+        FROM revisoes_juridicas.reviews r
+        INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
+        INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
+        WHERE rv.user_email = %s AND rv.can_view = TRUE
+        ORDER BY r.review_date DESC
+        LIMIT %s
+    """, (user_email, limit))
+
+
+def get_approvers_with_reviews(user_email: str) -> List[Dict]:
+    """Obtém lista de aprovadores que têm revisões enviadas ou aprovadas por eles"""
+    return fetchall("""
+        SELECT DISTINCT
+            ra.approver_email as email,
+            ra.approver_name as name
+        FROM revisoes_juridicas.review_approvals ra
+        INNER JOIN revisoes_juridicas.reviews r ON ra.review_id = r.id
+        INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
+        WHERE rv.user_email = %s 
+        AND rv.can_view = TRUE
+        AND ra.status IN ('pending', 'approved')
+        ORDER BY ra.approver_name ASC
+    """, (user_email,))
+
+
+def get_reviewers_with_reviews(user_email: str) -> List[Dict]:
+    """Obtém lista de responsáveis (revisores) que criaram revisões"""
+    return fetchall("""
+        SELECT DISTINCT
+            r.reviewer_email as email,
+            r.reviewer_name as name
+        FROM revisoes_juridicas.reviews r
+        INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
+        WHERE rv.user_email = %s 
+        AND rv.can_view = TRUE
+        ORDER BY r.reviewer_name ASC
+    """, (user_email,))
+
+
+def get_pending_approvals_for_user(approver_email: str) -> List[Dict]:
+    """Obtém revisões pendentes de aprovação para um aprovador específico"""
+    return fetchall("""
+        SELECT 
+            r.id,
+            r.document_id,
+            r.version,
+            r.reviewer_email,
+            r.reviewer_name,
+            r.review_date,
+            r.comments,
+            r.created_at,
+            d.title,
+            d.summary,
+            d.description,
+            ra.approver_email,
+            ra.approver_name,
+            ra.created_at as approval_requested_at,
+            ra.comments as approval_comments
+        FROM revisoes_juridicas.reviews r
+        INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
+        INNER JOIN revisoes_juridicas.review_approvals ra ON r.id = ra.review_id
+        WHERE ra.approver_email = %s
+        AND ra.status = 'pending'
+        ORDER BY ra.created_at DESC
+    """, (approver_email,))

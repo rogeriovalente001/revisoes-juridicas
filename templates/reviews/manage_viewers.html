@@ -1,26 +1,34 @@
 {% extends "base.html" %}
 
-{% block title %}Solicitar Aprovação - Revisões Jurídicas{% endblock %}
+{% block title %}Gerenciar Visualizadores - Revisões Jurídicas{% endblock %}
 
 {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-users"></i> Gerenciar Visualizadores</h1>
+    <a href="{{ url_for('reviews.detail', review_id=review.id) }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+</div>
+
 <div class="card">
     <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-check-circle"></i> Solicitar Aprovação</h5>
+        <h5 class="mb-0"><i class="fas fa-file-alt"></i> {{ review.title }} - v{{ review.version }}</h5>
     </div>
     <div class="card-body">
-        <p class="text-muted">Selecione os usuários que devem aprovar esta revisão.</p>
+        <p class="text-muted">Selecione os usuários que poderão visualizar esta revisão.</p>
         
         <form method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <div class="mb-3">
-                <label class="form-label">Aprovadores</label>
+                <label class="form-label">Usuários</label>
                 <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
                     {% for user in users %}
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="approvers[]" 
-                               value="{{ user.email }}" id="approver_{{ loop.index }}">
-                        <label class="form-check-label" for="approver_{{ loop.index }}">
+                        <input class="form-check-input" type="checkbox" name="viewers[]" 
+                               value="{{ user.email }}" id="viewer_{{ loop.index }}"
+                               {% if user.email in viewer_emails %}checked{% endif %}>
+                        <label class="form-check-label" for="viewer_{{ loop.index }}">
                             {{ user.name }} ({{ user.email }})
                         </label>
                     </div>
@@ -33,7 +41,7 @@
                     <i class="fas fa-times"></i> Cancelar
                 </a>
                 <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i> Enviar Solicitação
+                    <i class="fas fa-save"></i> Salvar
                 </button>
             </div>
         </form>

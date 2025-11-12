@@ -14,6 +14,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- CSS Customizado -->
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <!-- CSS Temas -->
+    <link href="{{ url_for('static', filename='css/themes.css') }}" rel="stylesheet">
     
     {% block extra_css %}{% endblock %}
 </head>
@@ -22,6 +24,7 @@
     <header class="argo-header">
         <div class="container-fluid">
             <div class="row align-items-center">
+                <!-- Logo e Nome do Sistema -->
                 <div class="col-auto">
                     <div class="d-flex align-items-center">
                         <div class="header-logo me-3">
@@ -32,11 +35,69 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Menu de Navegação -->
+                <div class="col-auto">
+                    <nav class="header-nav">
+                        <ul class="nav-list">
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                                    <i class="fas fa-file-contract"></i>
+                                    <span>Revisões</span>
+                                    <i class="fas fa-chevron-down ms-1"></i>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for('reviews.manage') }}">
+                                            <i class="fas fa-cog me-2"></i>Gerenciamento de Revisões
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for('reviews.pending_approvals') }}">
+                                            <i class="fas fa-check-circle me-2"></i>Aprovações de Revisões
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+                
+                <!-- Informações do Usuário e Logout -->
                 <div class="col-auto ms-auto">
                     <div class="d-flex align-items-center">
-                        <span class="text-white me-3">{{ current_user.name }}</span>
-                        <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-light">
-                            <i class="fas fa-sign-out-alt"></i> Sair
+                        <!-- Avatar do Usuário -->
+                        <div class="user-avatar me-3">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        
+                        <!-- Informações do Usuário -->
+                        <div class="user-info me-3">
+                            <div class="user-name">
+                                {% if current_user and current_user.name %}
+                                    {{ current_user.name }}
+                                {% else %}
+                                    Usuário
+                                {% endif %}
+                            </div>
+                            <div class="user-role">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                {% if current_user and current_user.profile_name %}
+                                    {{ current_user.profile_name }}
+                                {% else %}
+                                    Sem perfil
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Botão de Tema -->
+                        <button id="theme-switcher-btn" class="btn btn-outline-light btn-sm me-2" type="button" title="Alternar tema" style="border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                        
+                        <!-- Botão de Sair -->
+                        <a href="{{ url_for('auth.logout') }}" class="logout-btn" title="Sair">
+                            <i class="fas fa-sign-out-alt"></i>
                         </a>
                     </div>
                 </div>
@@ -48,11 +109,15 @@
     <main class="container-fluid py-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
+                {% set seen_messages = [] %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
+                    {% if message not in seen_messages %}
+                        {% set _ = seen_messages.append(message) %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert" data-auto-dismiss="{{ '3000' if category == 'success' else '5000' }}">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endif %}
                 {% endfor %}
             {% endif %}
         {% endwith %}
@@ -62,6 +127,21 @@
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Theme Switcher JS -->
+    <script src="{{ url_for('static', filename='js/theme-switcher.js') }}"></script>
+    <script>
+        // Auto-dismiss alerts após o tempo especificado
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert[data-auto-dismiss]');
+            alerts.forEach(function(alert) {
+                const timeout = parseInt(alert.getAttribute('data-auto-dismiss')) || 5000;
+                setTimeout(function() {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, timeout);
+            });
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

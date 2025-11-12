@@ -3,38 +3,144 @@
 {% block title %}Aprovar Revisão - Revisões Jurídicas{% endblock %}
 
 {% block content %}
-<div class="card">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-check-circle"></i> Aprovar Revisão</h1>
+    <a href="{{ url_for('reviews.pending_approvals') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<!-- Informações do Documento -->
+<div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-check-circle"></i> Aprovar Revisão</h5>
+        <h5 class="mb-0"><i class="fas fa-file-alt"></i> Informações do Documento</h5>
     </div>
     <div class="card-body">
-        <h4>{{ review.title }}</h4>
-        <p><strong>Versão:</strong> v{{ review.version }}</p>
-        <p><strong>Revisor:</strong> {{ review.reviewer_name }}</p>
-        <p><strong>Data:</strong> {{ review.review_date.strftime('%d/%m/%Y %H:%M:%S') if review.review_date else 'N/A' }}</p>
-        <p><strong>Comentários:</strong> {{ review.comments or 'N/A' }}</p>
-        
-        <hr>
-        
-        <form method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="token" value="{{ request.args.get('token') }}">
-            
-            <div class="mb-3">
-                <label class="form-label">Comentário * <small class="text-danger">(Obrigatório)</small></label>
-                <textarea name="comments" class="form-control" rows="5" required placeholder="Digite seu comentário sobre a aprovação ou rejeição..."></textarea>
+        <p><strong>Título:</strong> <span class="text-content">{{ review.title }}</span></p>
+        <p><strong>Resumo:</strong> <span class="text-content">{{ review.summary or 'N/A' }}</span></p>
+        <p><strong>Descrição:</strong> <span class="text-content">{{ review.description or 'N/A' }}</span></p>
+    </div>
+</div>
+
+<!-- Informações da Revisão -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-clipboard-check"></i> Informações da Revisão</h5>
+    </div>
+    <div class="card-body">
+        <p><strong>Versão:</strong> <span class="text-content">v{{ review.version }}</span></p>
+        <p><strong>Revisor:</strong> <span class="text-content">{{ review.reviewer_name }}</span></p>
+        <p><strong>Data/Hora:</strong> <span class="text-content">{{ review.review_date.strftime('%d/%m/%Y %H:%M:%S') if review.review_date else 'N/A' }}</span></p>
+        <p><strong>Comentários:</strong> <span class="text-content">{{ review.comments or 'N/A' }}</span></p>
+    </div>
+</div>
+
+<!-- Riscos -->
+{% if review.risks %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Riscos Identificados</h5>
+    </div>
+    <div class="card-body">
+        {% for risk in review.risks %}
+        <div class="mb-3 p-3 border rounded">
+            <p><strong>Risco Identificado:</strong> <span class="text-content">{{ risk.risk_text }}</span></p>
+            <p><strong>Sugestão do Jurídico:</strong> <span class="text-content">{{ risk.legal_suggestion or 'N/A' }}</span></p>
+            <p><strong>Definição Final:</strong> <span class="text-content">{{ risk.final_definition or 'N/A' }}</span></p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Observações -->
+{% if review.observations %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-sticky-note"></i> Observações Gerais</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-content">{{ review.observations }}</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Botões de Ação -->
+<div class="card mb-4">
+    <div class="card-body text-center">
+        <p class="text-muted mb-3">Selecione uma ação para esta revisão:</p>
+        <div class="d-flex justify-content-center gap-3">
+            <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#approveModal">
+                <i class="fas fa-check"></i> Aprovar
+            </button>
+            <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                <i class="fas fa-times"></i> Rejeitar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Aprovação -->
+<div class="modal fade" id="approveModal" tabindex="-1" aria-labelledby="approveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="approveModalLabel">
+                    <i class="fas fa-check-circle"></i> Aprovar Revisão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            
-            <div class="d-flex justify-content-end gap-2">
-                <button type="submit" name="action" value="reject" class="btn btn-danger">
-                    <i class="fas fa-times"></i> Rejeitar
-                </button>
-                <button type="submit" name="action" value="approve" class="btn btn-success">
-                    <i class="fas fa-check"></i> Aprovar
-                </button>
+            <form method="POST" id="approveForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="approve">
+                <div class="modal-body">
+                    <p>Você está prestes a <strong>aprovar</strong> esta revisão.</p>
+                    <p class="text-muted">Por favor, forneça uma justificativa para a aprovação:</p>
+                    <div class="mb-3">
+                        <label for="approveComments" class="form-label">Justificativa * <small class="text-danger">(Obrigatório)</small></label>
+                        <textarea name="comments" id="approveComments" class="form-control" rows="5" required placeholder="Digite sua justificativa para a aprovação..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> Confirmar Aprovação
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Rejeição -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="rejectModalLabel">
+                    <i class="fas fa-times-circle"></i> Rejeitar Revisão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-        </form>
+            <form method="POST" id="rejectForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="reject">
+                <div class="modal-body">
+                    <p>Você está prestes a <strong>rejeitar</strong> esta revisão.</p>
+                    <p class="text-muted">Por favor, forneça uma justificativa para a rejeição:</p>
+                    <div class="mb-3">
+                        <label for="rejectComments" class="form-label">Justificativa * <small class="text-danger">(Obrigatório)</small></label>
+                        <textarea name="comments" id="rejectComments" class="form-control" rows="5" required placeholder="Digite sua justificativa para a rejeição..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Confirmar Rejeição
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}
-

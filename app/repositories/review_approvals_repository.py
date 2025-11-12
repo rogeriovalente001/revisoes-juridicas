@@ -21,13 +21,41 @@ def create_approval_request(review_id: int, requested_by: str, approver_emails: 
             
             # Criar registros de aprovação pendentes
             for approver_email in approver_emails:
-                # Buscar nome do aprovador (assumindo que temos acesso ao Connect)
-                # Por enquanto, usar email como nome
+                # Buscar nome do aprovador via Connect API
+                # Nota: Não temos contexto de requisição aqui, então tentamos sem cookies
+                # Se falhar, usamos o email como nome
+                try:
+                    from app.services.connect_api_service import connect_api_service
+                    users = connect_api_service.get_users(request_context=None)
+                    approver_name = next((u.get('name', approver_email) for u in users if u.get('email') == approver_email), approver_email)
+                except:
+                    approver_name = approver_email
+                
+                # Verificar se já existe aprovação para este review_id e approver_email
                 cur.execute("""
-                    INSERT INTO revisoes_juridicas.review_approvals 
-                    (review_id, approver_email, approver_name, status, comments)
-                    VALUES (%s, %s, %s, 'pending', '')
-                """, (review_id, approver_email, approver_email))
+                    SELECT id FROM revisoes_juridicas.review_approvals
+                    WHERE review_id = %s AND approver_email = %s
+                """, (review_id, approver_email))
+                existing = cur.fetchone()
+                
+                if existing:
+                    # Atualizar aprovação existente para pending
+                    cur.execute("""
+                        UPDATE revisoes_juridicas.review_approvals
+                        SET status = 'pending',
+                            approver_name = %s,
+                            created_at = CURRENT_TIMESTAMP,
+                            approved_at = NULL,
+                            comments = ''
+                        WHERE review_id = %s AND approver_email = %s
+                    """, (approver_name, review_id, approver_email))
+                else:
+                    # Criar nova aprovação
+                    cur.execute("""
+                        INSERT INTO revisoes_juridicas.review_approvals 
+                        (review_id, approver_email, approver_name, status, comments)
+                        VALUES (%s, %s, %s, 'pending', '')
+                    """, (review_id, approver_email, approver_name))
             
             conn.commit()
             return request_id

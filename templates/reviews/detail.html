@@ -5,14 +5,28 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="fas fa-eye"></i> Detalhes da Revisão</h1>
-    <div>
+    <div class="d-flex gap-2">
+        {% if current_user and current_user.can_edit() %}
+        <form method="POST" action="{{ url_for('reviews.submit_approval', review_id=review.id) }}" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-warning" title="Submeter à aprovação sem criar nova versão">
+                <i class="fas fa-paper-plane"></i> Submeter à Aprovação
+            </button>
+        </form>
+        <a href="{{ url_for('reviews.manage_viewers', review_id=review.id) }}" class="btn btn-info" title="Gerenciar visualizadores">
+            <i class="fas fa-users"></i> Gerenciar Visualizadores
+        </a>
+        <a href="{{ url_for('reviews.edit', review_id=review.id) }}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> Editar
+        </a>
+        {% endif %}
         <a href="{{ url_for('reviews.export', review_id=review.id, format='pdf') }}" class="btn btn-danger">
             <i class="fas fa-file-pdf"></i> Exportar PDF
         </a>
         <a href="{{ url_for('reviews.export', review_id=review.id, format='docx') }}" class="btn btn-primary">
             <i class="fas fa-file-word"></i> Exportar DOCX
         </a>
-        <a href="{{ url_for('reviews.list') }}" class="btn btn-secondary">
+        <a href="{{ url_for('reviews.manage') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Voltar
         </a>
     </div>
@@ -24,9 +38,9 @@
         <h5 class="mb-0"><i class="fas fa-file-alt"></i> Informações do Documento</h5>
     </div>
     <div class="card-body">
-        <p><strong>Título:</strong> {{ review.title }}</p>
-        <p><strong>Resumo:</strong> {{ review.summary or 'N/A' }}</p>
-        <p><strong>Descrição:</strong> {{ review.description or 'N/A' }}</p>
+        <p><strong>Título:</strong> <span class="text-content">{{ review.title }}</span></p>
+        <p><strong>Resumo:</strong> <span class="text-content">{{ review.summary or 'N/A' }}</span></p>
+        <p><strong>Descrição:</strong> <span class="text-content">{{ review.description or 'N/A' }}</span></p>
     </div>
 </div>
 
@@ -36,10 +50,10 @@
         <h5 class="mb-0"><i class="fas fa-clipboard-check"></i> Informações da Revisão</h5>
     </div>
     <div class="card-body">
-        <p><strong>Versão:</strong> v{{ review.version }}</p>
-        <p><strong>Revisor:</strong> {{ review.reviewer_name }}</p>
-        <p><strong>Data/Hora:</strong> {{ review.review_date.strftime('%d/%m/%Y %H:%M:%S') if review.review_date else 'N/A' }}</p>
-        <p><strong>Comentários:</strong> {{ review.comments or 'N/A' }}</p>
+        <p><strong>Versão:</strong> <span class="text-content">v{{ review.version }}</span></p>
+        <p><strong>Revisor:</strong> <span class="text-content">{{ review.reviewer_name }}</span></p>
+        <p><strong>Data/Hora:</strong> <span class="text-content">{{ review.review_date.strftime('%d/%m/%Y %H:%M:%S') if review.review_date else 'N/A' }}</span></p>
+        <p><strong>Comentários:</strong> <span class="text-content">{{ review.comments or 'N/A' }}</span></p>
     </div>
 </div>
 
@@ -52,9 +66,9 @@
     <div class="card-body">
         {% for risk in review.risks %}
         <div class="mb-3 p-3 border rounded">
-            <p><strong>Risco Identificado:</strong> {{ risk.risk_text }}</p>
-            <p><strong>Sugestão do Jurídico:</strong> {{ risk.legal_suggestion or 'N/A' }}</p>
-            <p><strong>Definição Final:</strong> {{ risk.final_definition or 'N/A' }}</p>
+            <p><strong>Risco Identificado:</strong> <span class="text-content">{{ risk.risk_text }}</span></p>
+            <p><strong>Sugestão do Jurídico:</strong> <span class="text-content">{{ risk.legal_suggestion or 'N/A' }}</span></p>
+            <p><strong>Definição Final:</strong> <span class="text-content">{{ risk.final_definition or 'N/A' }}</span></p>
         </div>
         {% endfor %}
     </div>
@@ -68,7 +82,7 @@
         <h5 class="mb-0"><i class="fas fa-sticky-note"></i> Observações Gerais</h5>
     </div>
     <div class="card-body">
-        <p>{{ review.observations }}</p>
+        <p style="color: var(--text-primary);">{{ review.observations }}</p>
     </div>
 </div>
 {% endif %}
