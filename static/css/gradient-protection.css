@@ -1,0 +1,53 @@
+/* ========================================
+   GRADIENT PROTECTION CSS
+   Proteção simples e eficaz para gradientes
+   CARREGAR POR ÚLTIMO - APÓS TODOS OS OUTROS CSS
+   ======================================== */
+
+/* Proteção máxima para cards com gradientes inline */
+.card[style*="background: linear-gradient"] {
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    position: relative !important;
+    z-index: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+    animation-delay: 0 !important;
+    animation-duration: 0 !important;
+    transition-delay: 0 !important;
+    transition-duration: 0 !important;
+    will-change: auto !important;
+}
+
+/* Proteção para elementos filhos */
+.card[style*="background: linear-gradient"] * {
+    transition: none !important;
+}
+
+/* Proteção específica para card-body */
+.card[style*="background: linear-gradient"] .card-body {
+    background-color: transparent !important;
+    color: inherit !important;
+    transition: none !important;
+}
+
+/* Proteção para todos os elementos de texto */
+.card[style*="background: linear-gradient"] h1,
+.card[style*="background: linear-gradient"] h2,
+.card[style*="background: linear-gradient"] h3,
+.card[style*="background: linear-gradient"] h4,
+.card[style*="background: linear-gradient"] h5,
+.card[style*="background: linear-gradient"] h6,
+.card[style*="background: linear-gradient"] p,
+.card[style*="background: linear-gradient"] small,
+.card[style*="background: linear-gradient"] span,
+.card[style*="background: linear-gradient"] i,
+.card[style*="background: linear-gradient"] strong,
+.card[style*="background: linear-gradient"] b,
+.card[style*="background: linear-gradient"] div {
+    color: white !important;
+    transition: none !important;
+}
+

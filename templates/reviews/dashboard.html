@@ -10,19 +10,19 @@
     <p class="text-muted">Visão geral das revisões jurídicas</p>
 </div>
 
-<!-- Cards de Estatísticas -->
+<!-- Primeira Linha de Cards -->
 <div class="row g-4 mb-4">
     <!-- Total de Revisões -->
     <div class="col-md-3">
-        <div class="card dashboard-card dashboard-card-primary">
+        <div class="card text-white" style="background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3) !important;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-muted mb-2">Total de Revisões</h6>
-                        <h2 class="mb-0 dashboard-card-number">{{ stats.total_reviews }}</h2>
+                        <h6 class="mb-2" style="opacity: 0.9;">Total de Revisões</h6>
+                        <h2 class="mb-0 fw-bold">{{ stats.total_reviews }}</h2>
                     </div>
-                    <div class="dashboard-card-icon">
-                        <i class="fas fa-file-contract"></i>
+                    <div>
+                        <i class="fas fa-file-contract fa-2x" style="opacity: 0.8;"></i>
                     </div>
                 </div>
             </div>
@@ -31,15 +31,15 @@
     
     <!-- Pendentes de Aprovação -->
     <div class="col-md-3">
-        <div class="card dashboard-card dashboard-card-warning">
+        <div class="card text-white" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3) !important;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-muted mb-2">Pendentes de Aprovação</h6>
-                        <h2 class="mb-0 dashboard-card-number">{{ stats.pending_approvals }}</h2>
+                        <h6 class="mb-2" style="opacity: 0.9;">Pendentes de Aprovação</h6>
+                        <h2 class="mb-0 fw-bold">{{ stats.pending_approvals }}</h2>
                     </div>
-                    <div class="dashboard-card-icon">
-                        <i class="fas fa-clock"></i>
+                    <div>
+                        <i class="fas fa-clock fa-2x" style="opacity: 0.8;"></i>
                     </div>
                 </div>
             </div>
@@ -48,15 +48,15 @@
     
     <!-- Aprovadas -->
     <div class="col-md-3">
-        <div class="card dashboard-card dashboard-card-success">
+        <div class="card text-white" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-muted mb-2">Aprovadas</h6>
-                        <h2 class="mb-0 dashboard-card-number">{{ stats.approved_reviews }}</h2>
+                        <h6 class="mb-2" style="opacity: 0.9;">Aprovadas</h6>
+                        <h2 class="mb-0 fw-bold">{{ stats.approved_reviews }}</h2>
                     </div>
-                    <div class="dashboard-card-icon">
-                        <i class="fas fa-check-circle"></i>
+                    <div>
+                        <i class="fas fa-check-circle fa-2x" style="opacity: 0.8;"></i>
                     </div>
                 </div>
             </div>
@@ -65,15 +65,15 @@
     
     <!-- Em Revisão -->
     <div class="col-md-3">
-        <div class="card dashboard-card dashboard-card-info">
+        <div class="card text-white" style="background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3) !important;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-muted mb-2">Em Revisão</h6>
-                        <h2 class="mb-0 dashboard-card-number">{{ stats.in_review }}</h2>
+                        <h6 class="mb-2" style="opacity: 0.9;">Em Revisão</h6>
+                        <h2 class="mb-0 fw-bold">{{ stats.in_review }}</h2>
                     </div>
-                    <div class="dashboard-card-icon">
-                        <i class="fas fa-edit"></i>
+                    <div>
+                        <i class="fas fa-edit fa-2x" style="opacity: 0.8;"></i>
                     </div>
                 </div>
             </div>
@@ -81,20 +81,37 @@
     </div>
 </div>
 
-<!-- Segunda Linha de Estatísticas -->
+<!-- Segunda Linha de Cards -->
 <div class="row g-4 mb-4">
-    <!-- Revisões Recentes (30 dias) -->
-    <div class="col-md-6">
-        <div class="card dashboard-card dashboard-card-secondary">
+    <!-- Rejeitadas -->
+    <div class="col-md-4">
+        <div class="card text-white" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3) !important;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-muted mb-2">Revisões Recentes (30 dias)</h6>
-                        <h2 class="mb-0 dashboard-card-number">{{ stats.recent_reviews }}</h2>
-                        <small class="text-muted">Últimos 30 dias</small>
+                        <h6 class="mb-2" style="opacity: 0.9;">Rejeitadas</h6>
+                        <h2 class="mb-0 fw-bold">{{ stats.rejected_reviews }}</h2>
                     </div>
-                    <div class="dashboard-card-icon">
-                        <i class="fas fa-calendar-alt"></i>
+                    <div>
+                        <i class="fas fa-times-circle fa-2x" style="opacity: 0.8;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Revisões Recentes (30 dias) -->
+    <div class="col-md-4">
+        <div class="card text-white" style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3) !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-2" style="opacity: 0.9;">Revisões Recentes (30 dias)</h6>
+                        <h2 class="mb-0 fw-bold">{{ stats.recent_reviews }}</h2>
+                        <small style="opacity: 0.8;">Últimos 30 dias</small>
+                    </div>
+                    <div>
+                        <i class="fas fa-calendar-alt fa-2x" style="opacity: 0.8;"></i>
                     </div>
                 </div>
             </div>
@@ -102,17 +119,17 @@
     </div>
     
     <!-- Total de Documentos -->
-    <div class="col-md-6">
-        <div class="card dashboard-card dashboard-card-dark">
+    <div class="col-md-4">
+        <div class="card text-white" style="background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3) !important;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-muted mb-2">Total de Documentos</h6>
-                        <h2 class="mb-0 dashboard-card-number">{{ stats.total_documents }}</h2>
-                        <small class="text-muted">Documentos únicos</small>
+                        <h6 class="mb-2" style="opacity: 0.9;">Total de Documentos</h6>
+                        <h2 class="mb-0 fw-bold">{{ stats.total_documents }}</h2>
+                        <small style="opacity: 0.8;">Documentos únicos</small>
                     </div>
-                    <div class="dashboard-card-icon">
-                        <i class="fas fa-folder-open"></i>
+                    <div>
+                        <i class="fas fa-folder-open fa-2x" style="opacity: 0.8;"></i>
                     </div>
                 </div>
             </div>

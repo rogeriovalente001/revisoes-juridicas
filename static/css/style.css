@@ -3,17 +3,15 @@
    ======================================== */
 
 :root {
-    /* Paleta de cores Argo Solutions */
-    --primary-color: #8B5CF6;        /* Roxo médio */
-    --secondary-color: #7C3AED;      /* Roxo escuro */
-    --accent-color: #F97316;         /* Laranja */
-    --info-color: #3B82F6;           /* Azul */
+    /* Paleta de cores - mesma estrutura do Connect */
+    --primary-color: #3B82F6;        /* Azul */
+    --secondary-color: #6B7280;      /* Cinza */
+    --accent-color: #F59E0B;         /* Laranja */
+    --info-color: #06B6D4;           /* Ciano */
     --success-color: #10B981;        /* Verde */
-    --warning-color: #F59E0B;       /* Amarelo */
-    --danger-color: #EF4444;        /* Vermelho */
-    --light-color: #F8FAFC;          /* Cinza claro */
+    --warning-color: #F59E0B;        /* Amarelo */
+    --danger-color: #EF4444;         /* Vermelho */
     --dark-color: #1F2937;           /* Cinza escuro */
-    --gray-color: #6B7280;           /* Cinza médio */
 }
 
 body {
@@ -249,103 +247,120 @@ body {
 }
 
 /* Card Primary - Azul (Connect) */
-.dashboard-card-primary::before {
+.card.dashboard-card.dashboard-card-primary::before {
     background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%) !important;
 }
 
-.dashboard-card-primary .dashboard-card-number {
-    color: #3B82F6 !important;
+.card.dashboard-card.dashboard-card-primary h2.dashboard-card-number,
+.card.dashboard-card.dashboard-card-primary .dashboard-card-number {
     font-weight: 700 !important;
     transition: color 0s !important;
 }
 
-.dashboard-card-primary .dashboard-card-icon {
-    color: #3B82F6 !important;
+.card.dashboard-card.dashboard-card-primary .dashboard-card-icon,
+.card.dashboard-card.dashboard-card-primary .dashboard-card-icon i {
     font-size: 2.5rem !important;
     transition: color 0s !important;
 }
 
 /* Card Warning - Amarelo/Laranja */
-.dashboard-card-warning::before {
+.card.dashboard-card.dashboard-card-warning::before {
     background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
 }
 
-.dashboard-card-warning .dashboard-card-number {
-    color: #F59E0B !important;
+.card.dashboard-card.dashboard-card-warning h2.dashboard-card-number,
+.card.dashboard-card.dashboard-card-warning .dashboard-card-number {
     font-weight: 700 !important;
     transition: color 0s !important;
 }
 
-.dashboard-card-warning .dashboard-card-icon {
-    color: #F59E0B !important;
+.card.dashboard-card.dashboard-card-warning .dashboard-card-icon,
+.card.dashboard-card.dashboard-card-warning .dashboard-card-icon i {
     font-size: 2.5rem !important;
     transition: color 0s !important;
 }
 
 /* Card Success - Verde */
-.dashboard-card-success::before {
+.card.dashboard-card.dashboard-card-success::before {
     background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
 }
 
-.dashboard-card-success .dashboard-card-number {
-    color: #10B981 !important;
+.card.dashboard-card.dashboard-card-success h2.dashboard-card-number,
+.card.dashboard-card.dashboard-card-success .dashboard-card-number {
     font-weight: 700 !important;
     transition: color 0s !important;
 }
 
-.dashboard-card-success .dashboard-card-icon {
-    color: #10B981 !important;
+.card.dashboard-card.dashboard-card-success .dashboard-card-icon,
+.card.dashboard-card.dashboard-card-success .dashboard-card-icon i {
     font-size: 2.5rem !important;
     transition: color 0s !important;
 }
 
 /* Card Info - Ciano/Azul claro */
-.dashboard-card-info::before {
+.card.dashboard-card.dashboard-card-info::before {
     background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%) !important;
 }
 
-.dashboard-card-info .dashboard-card-number {
-    color: #06B6D4 !important;
+.card.dashboard-card.dashboard-card-info h2.dashboard-card-number,
+.card.dashboard-card.dashboard-card-info .dashboard-card-number {
     font-weight: 700 !important;
     transition: color 0s !important;
 }
 
-.dashboard-card-info .dashboard-card-icon {
-    color: #06B6D4 !important;
+.card.dashboard-card.dashboard-card-info .dashboard-card-icon,
+.card.dashboard-card.dashboard-card-info .dashboard-card-icon i {
     font-size: 2.5rem !important;
     transition: color 0s !important;
 }
 
 /* Card Secondary - Cinza */
-.dashboard-card-secondary::before {
+.card.dashboard-card.dashboard-card-secondary::before {
     background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%) !important;
 }
 
-.dashboard-card-secondary .dashboard-card-number {
-    color: #6B7280 !important;
+.card.dashboard-card.dashboard-card-secondary h2.dashboard-card-number,
+.card.dashboard-card.dashboard-card-secondary .dashboard-card-number {
     font-weight: 700 !important;
     transition: color 0s !important;
 }
 
-.dashboard-card-secondary .dashboard-card-icon {
-    color: #6B7280 !important;
+.card.dashboard-card.dashboard-card-secondary .dashboard-card-icon,
+.card.dashboard-card.dashboard-card-secondary .dashboard-card-icon i {
     font-size: 2.5rem !important;
     transition: color 0s !important;
 }
 
 /* Card Dark - Preto/Cinza escuro */
-.dashboard-card-dark::before {
+.card.dashboard-card.dashboard-card-dark::before {
     background: linear-gradient(135deg, #1F2937 0%, #111827 100%) !important;
 }
 
-.dashboard-card-dark .dashboard-card-number {
-    color: #1F2937 !important;
+.card.dashboard-card.dashboard-card-dark h2.dashboard-card-number,
+.card.dashboard-card.dashboard-card-dark .dashboard-card-number {
     font-weight: 700 !important;
     transition: color 0s !important;
 }
 
-.dashboard-card-dark .dashboard-card-icon {
-    color: #1F2937 !important;
+.card.dashboard-card.dashboard-card-dark .dashboard-card-icon,
+.card.dashboard-card.dashboard-card-dark .dashboard-card-icon i {
+    font-size: 2.5rem !important;
+    transition: color 0s !important;
+}
+
+/* Card Danger - Vermelho */
+.card.dashboard-card.dashboard-card-danger::before {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
+}
+
+.card.dashboard-card.dashboard-card-danger h2.dashboard-card-number,
+.card.dashboard-card.dashboard-card-danger .dashboard-card-number {
+    font-weight: 700 !important;
+    transition: color 0s !important;
+}
+
+.card.dashboard-card.dashboard-card-danger .dashboard-card-icon,
+.card.dashboard-card.dashboard-card-danger .dashboard-card-icon i {
     font-size: 2.5rem !important;
     transition: color 0s !important;
 }
@@ -364,39 +379,6 @@ body {
     color: #b0b0b0 !important;
 }
 
-[data-theme="dark"] .dashboard-card-primary .dashboard-card-number,
-[data-theme="dark"] .dashboard-card-primary .dashboard-card-icon {
-    color: #60A5FA !important;
-    transition: color 0s !important;
-}
-
-[data-theme="dark"] .dashboard-card-warning .dashboard-card-number,
-[data-theme="dark"] .dashboard-card-warning .dashboard-card-icon {
-    color: #FBBF24 !important;
-    transition: color 0s !important;
-}
-
-[data-theme="dark"] .dashboard-card-success .dashboard-card-number,
-[data-theme="dark"] .dashboard-card-success .dashboard-card-icon {
-    color: #34D399 !important;
-    transition: color 0s !important;
-}
-
-[data-theme="dark"] .dashboard-card-info .dashboard-card-number,
-[data-theme="dark"] .dashboard-card-info .dashboard-card-icon {
-    color: #22D3EE !important;
-    transition: color 0s !important;
-}
-
-[data-theme="dark"] .dashboard-card-secondary .dashboard-card-number,
-[data-theme="dark"] .dashboard-card-secondary .dashboard-card-icon {
-    color: #9CA3AF !important;
-    transition: color 0s !important;
-}
-
-[data-theme="dark"] .dashboard-card-dark .dashboard-card-number,
-[data-theme="dark"] .dashboard-card-dark .dashboard-card-icon {
-    color: #D1D5DB !important;
-    transition: color 0s !important;
-}
+/* Tema Escuro - Cores removidas - usando estilos inline no HTML */
+/* As cores são definidas via estilos inline no template dashboard.html */
 

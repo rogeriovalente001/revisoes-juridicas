@@ -294,6 +294,20 @@ def get_dashboard_stats(user_email: str) -> Dict:
     """, (user_email,))
     stats['approved_reviews'] = result['total'] if result else 0
     
+    # Revisões rejeitadas (tem aprovação rejeitada)
+    result = fetchone("""
+        SELECT COUNT(DISTINCT r.id) as total
+        FROM revisoes_juridicas.reviews r
+        INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
+        INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
+        WHERE rv.user_email = %s AND rv.can_view = TRUE
+        AND EXISTS (
+            SELECT 1 FROM revisoes_juridicas.review_approvals ra 
+            WHERE ra.review_id = r.id AND ra.status = 'rejected'
+        )
+    """, (user_email,))
+    stats['rejected_reviews'] = result['total'] if result else 0
+    
     # Revisões em revisão (sem aprovações - nem pendente nem aprovada)
     result = fetchone("""
         SELECT COUNT(DISTINCT r.id) as total

@@ -20,6 +20,9 @@
     --warning-color: #F59E0B;
     --danger-color: #EF4444;
     --info-color: #3B82F6;
+    --primary-color: #3B82F6;
+    --secondary-color: #6B7280;
+    --dark-color: #1F2937;
 }
 
 /* Tema Escuro */
@@ -40,6 +43,9 @@
     --warning-color: #f59e0b;
     --danger-color: #ef4444;
     --info-color: #06b6d4;
+    --primary-color: #60A5FA;
+    --secondary-color: #9CA3AF;
+    --dark-color: #D1D5DB;
 }
 
 /* Aplicação do tema ao body */
@@ -50,11 +56,20 @@ body {
 }
 
 /* Cards */
-.card:not(.dashboard-card) {
+.card:not([style*="background: linear-gradient"]) {
     background-color: var(--bg-primary);
     border-color: var(--border-color);
     color: var(--text-primary);
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Cards com gradiente inline - NÃO aplicar transição */
+.card[style*="background: linear-gradient"] {
+    transition: none !important;
+}
+
+.card[style*="background: linear-gradient"] * {
+    transition: none !important;
 }
 
 /* Cards com bordas coloridas mantêm suas cores */
@@ -96,7 +111,8 @@ body {
 .dashboard-card-success,
 .dashboard-card-info,
 .dashboard-card-secondary,
-.dashboard-card-dark {
+.dashboard-card-dark,
+.dashboard-card-danger {
     border: none !important;
 }
 
@@ -105,7 +121,8 @@ body {
 .dashboard-card-success .card-body,
 .dashboard-card-info .card-body,
 .dashboard-card-secondary .card-body,
-.dashboard-card-dark .card-body {
+.dashboard-card-dark .card-body,
+.dashboard-card-danger .card-body {
     background-color: transparent !important;
 }
 
@@ -119,6 +136,9 @@ body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
 }
+
+/* Dashboard cards - NÃO aplicar cor genérica */
+
 
 /* Tabelas */
 .table {
@@ -326,6 +346,11 @@ input[type="radio"] {
     color: var(--text-muted) !important;
 }
 
+/* EXCEÇÃO: text-muted dentro de dashboard cards - manter cor padrão */
+.dashboard-card .text-muted {
+    color: var(--text-muted) !important;
+}
+
 .text-primary {
     color: var(--accent-primary) !important;
 }
@@ -365,10 +390,11 @@ input[type="radio"] {
     box-shadow: 0 1rem 3rem var(--shadow-medium) !important;
 }
 
-/* Transições suaves - exceto dashboard cards */
-*:not(.dashboard-card):not(.dashboard-card *):not(.dashboard-card-number):not(.dashboard-card-icon) {
+/* Transições suaves - exceto cards com gradiente inline */
+*:not([style*="background: linear-gradient"]):not(.card[style*="background: linear-gradient"] *) {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
+
 
 /* Scrollbar personalizada */
 ::-webkit-scrollbar {
