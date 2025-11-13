@@ -95,11 +95,15 @@ def reject_review(review_id: int, approver_email: str, approver_name: str, comme
 
 
 def get_review_approvals(review_id: int) -> List[dict]:
-    """Obtém histórico completo de aprovações de uma revisão"""
+    """Obtém histórico completo de aprovações de TODAS as versões do documento"""
     return fetchall("""
-        SELECT * FROM revisoes_juridicas.review_approvals
-        WHERE review_id = %s
-        ORDER BY approved_at DESC NULLS LAST, created_at DESC
+        SELECT ra.*, r.version
+        FROM revisoes_juridicas.review_approvals ra
+        INNER JOIN revisoes_juridicas.reviews r ON ra.review_id = r.id
+        WHERE r.document_id = (
+            SELECT document_id FROM revisoes_juridicas.reviews WHERE id = %s
+        )
+        ORDER BY ra.approved_at DESC NULLS LAST, ra.created_at DESC
     """, (review_id,))
 
 

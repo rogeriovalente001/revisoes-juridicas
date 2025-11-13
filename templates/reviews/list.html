@@ -71,7 +71,7 @@
                 <thead>
                     <tr>
                         <th>Título</th>
-                        <th>Versão</th>
+                        <th>Versões (Doc/Rev/Risco)</th>
                         <th>Revisor</th>
                         <th>Data</th>
                         <th>Status</th>
@@ -82,7 +82,11 @@
                     {% for review in reviews %}
                     <tr>
                         <td>{{ review.title }}</td>
-                        <td>v{{ review.version }}</td>
+                        <td>
+                            <span class="badge bg-primary">Doc: V{{ review.document_version }}</span>
+                            <span class="badge bg-info">Rev: V{{ review.review_version }}</span>
+                            <span class="badge bg-warning text-dark">Risco: V{{ review.risk_version }}</span>
+                        </td>
                         <td>{{ review.reviewer_name }}</td>
                         <td>{{ review.review_date.strftime('%d/%m/%Y %H:%M') if review.review_date else 'N/A' }}</td>
                         <td>

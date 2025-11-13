@@ -2,7 +2,7 @@
 Rotas de revisões
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, session, current_app
 from flask_login import login_required, current_user
 from app.repositories import reviews_repository, review_viewers_repository, review_approvals_repository, review_documents_repository
 from app.services.connect_api_service import connect_api_service
@@ -72,8 +72,20 @@ def new():
             }
             
             review_data = {
-                'comments': request.form.get('comments', '').strip()
+                'comments': ''  # Não usado mais - usar review_comments
             }
+            
+            # Processar múltiplas revisões
+            review_comments_list = []
+            comments_texts = request.form.getlist('review_comments[]')
+            for comment_text in comments_texts:
+                if comment_text.strip():
+                    review_comments_list.append({
+                        'reviewer_email': current_user.email,
+                        'reviewer_name': current_user.name,
+                        'comments': comment_text.strip(),
+                        'review_date': datetime.now()
+                    })
             
             # Processar riscos
             risks_data = []
@@ -96,6 +108,10 @@ def new():
                 document_data, review_data, risks_data, observations,
                 current_user.email, current_user.name
             )
+            
+            # Salvar múltiplos comentários de revisão
+            if review_comments_list:
+                reviews_repository.add_review_comments(review_id, review_comments_list)
             
             # Adicionar criador automaticamente como viewer
             review_viewers_repository.add_viewers(review_id, [current_user.email])
@@ -137,6 +153,9 @@ def edit(review_id):
     
     if request.method == 'POST':
         try:
+            import logging
+            logger = logging.getLogger(__name__)
+            
             document_data = {
                 'title': request.form.get('title', '').strip(),
                 'summary': '',  # Campo removido - sempre vazio
@@ -144,41 +163,142 @@ def edit(review_id):
             }
             
             review_data = {
-                'comments': request.form.get('comments', '').strip()
+                'comments': ''  # Não usado mais - usar review_comments
             }
             
+            # Processar múltiplas revisões - pegar comentários da versão anterior para comparar
+            old_review_comments = reviews_repository.get_review_comments(review_id)
+            old_comments_texts = {c.get('comments', '').strip() for c in old_review_comments}
+            
+            # Processar apenas comentários NOVOS (que não existiam na versão anterior)
+            review_comments_list = []
+            comments_texts = request.form.getlist('review_comments[]')
+            for comment_text in comments_texts:
+                comment_text_stripped = comment_text.strip()
+                if comment_text_stripped and comment_text_stripped not in old_comments_texts:
+                    # Este é um comentário novo, adicionar à lista
+                    review_comments_list.append({
+                        'reviewer_email': current_user.email,
+                        'reviewer_name': current_user.name,
+                        'comments': comment_text_stripped,
+                        'review_date': datetime.now()
+                    })
+            
+            # Processar riscos - pegar riscos da versão anterior para comparar
+            old_risks = reviews_repository.get_review_risks(review_id)
+            old_risk_texts = {r.get('risk_text', '').strip() for r in old_risks}
+            
+            # Processar apenas riscos NOVOS (que não existiam na versão anterior)
             risks_data = []
             risk_texts = request.form.getlist('risk_text[]')
             legal_suggestions = request.form.getlist('legal_suggestion[]')
             final_definitions = request.form.getlist('final_definition[]')
             
             for i in range(len(risk_texts)):
-                if risk_texts[i].strip():
+                risk_text_stripped = risk_texts[i].strip()
+                if risk_text_stripped and risk_text_stripped not in old_risk_texts:
+                    # Este é um risco novo, adicionar à lista
                     risks_data.append({
-                        'risk_text': risk_texts[i].strip(),
+                        'risk_text': risk_text_stripped,
                         'legal_suggestion': legal_suggestions[i].strip() if i < len(legal_suggestions) else '',
                         'final_definition': final_definitions[i].strip() if i < len(final_definitions) else ''
                     })
             
             observations = request.form.get('observations', '').strip()
             
-            reviews_repository.update_review(
+            # Determinar se há novos comentários ou riscos
+            has_new_comments = len(review_comments_list) > 0
+            has_new_risks = len(risks_data) > 0
+            
+            # Atualizar revisão com versionamento independente
+            new_review_id = reviews_repository.update_review(
                 review_id, document_data, review_data, risks_data, observations,
-                current_user.email, current_user.name
+                current_user.email, current_user.name,
+                has_new_comments=has_new_comments,
+                has_new_risks=has_new_risks
             )
             
-            flash('Revisão atualizada com sucesso!', 'success')
-            return redirect(url_for('reviews.manage'))
+            if not new_review_id or new_review_id == 0:
+                flash('Erro ao atualizar revisão', 'error')
+                return redirect(url_for('reviews.edit', review_id=review_id))
+            
+            # Salvar múltiplos comentários de revisão (se houver novos)
+            if has_new_comments and review_comments_list:
+                reviews_repository.add_review_comments(new_review_id, review_comments_list)
+            
+            # Buscar viewers para envio de email
+            viewers = review_viewers_repository.get_viewers(new_review_id)
+            viewer_emails = [v['user_email'] for v in viewers]
+            
+            # Buscar dados da nova versão criada (DEPOIS de adicionar viewers)
+            new_review = reviews_repository.get_review_by_id(new_review_id, current_user.email)
+            
+            if not new_review:
+                flash('Erro ao buscar nova versão criada', 'error')
+                return redirect(url_for('reviews.manage'))
+            
+            # has_new_risks já foi determinado na linha 211
+            logger.info(f"Detecção de novos riscos: {has_new_risks}")
+            
+            # Fluxo baseado em detecção de novos riscos
+            if has_new_risks:
+                # Redirecionar para escolha de aprovação
+                flash('Revisão atualizada com sucesso! Novos riscos detectados.', 'success')
+                logger.info(f"Redirecionando para choose_approval (novos riscos detectados)")
+                return redirect(url_for('reviews.choose_approval', review_id=new_review_id))
+            else:
+                # Sem novos riscos: enviar e-mail para visualizadores e redirecionar
+                try:
+                    if viewer_emails:
+                        # Construir URL de visualização
+                        reviews_base_url = os.getenv('REVIEWS_BASE_URL')
+                        if not reviews_base_url:
+                            server_name = current_app.config.get('SERVER_NAME')
+                            preferred_scheme = current_app.config.get('PREFERRED_URL_SCHEME', 'http')
+                            if server_name:
+                                reviews_base_url = f"{preferred_scheme}://{server_name}"
+                            else:
+                                host_url = request.host_url.rstrip('/')
+                                if ':5001' in host_url:
+                                    reviews_base_url = host_url.replace(':5001', ':5002')
+                                else:
+                                    reviews_base_url = host_url
+                        else:
+                            reviews_base_url = reviews_base_url.rstrip('/')
+                        
+                        review_url = f"{reviews_base_url}{url_for('reviews.detail', review_id=new_review_id)}"
+                        
+                        # Enviar e-mails para visualizadores (nova versão)
+                        previous_version = new_review['version'] - 1
+                        result = email_service.send_emails_to_viewers(
+                            viewer_emails, new_review, review_url,
+                            is_new_document=False,
+                            previous_version=previous_version
+                        )
+                        
+                        logger.info(f"E-mails enviados para {len(result['sent'])} visualizador(es)")
+                        if result['failed']:
+                            logger.warning(f"Falha ao enviar para {len(result['failed'])} visualizador(es)")
+                except Exception as e:
+                    logger.error(f"Erro ao enviar e-mails para visualizadores: {str(e)}", exc_info=True)
+                
+                flash('Revisão atualizada com sucesso!', 'success')
+                return redirect(url_for('reviews.detail', review_id=new_review_id))
             
         except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Erro ao atualizar revisão: {str(e)}', exc_info=True)
             flash(f'Erro ao atualizar revisão: {str(e)}', 'error')
     
     # Carregar dados para edição
     risks = reviews_repository.get_review_risks(review_id)
     observations_obj = reviews_repository.get_review_observations(review_id)
+    review_comments = reviews_repository.get_review_comments(review_id)
     
     review['risks'] = risks
     review['observations'] = observations_obj.get('observations', '') if observations_obj else ''
+    review['review_comments'] = review_comments
     
     return render_template('reviews/form.html', review=review)
 
@@ -198,13 +318,25 @@ def detail(review_id):
     risks = reviews_repository.get_review_risks(review_id)
     observations = reviews_repository.get_review_observations(review_id)
     approvals = review_approvals_repository.get_review_approvals(review_id)
-    versions = reviews_repository.get_review_versions(review['document_id'], current_user.email)
+    
+    # Carregar históricos completos
+    all_versions = reviews_repository.get_all_document_versions(
+        review['document_id'], current_user.email
+    )
+    versions_with_comments = reviews_repository.get_all_versions_with_comments(
+        review['document_id'], current_user.email
+    )
+    versions_with_risks = reviews_repository.get_all_versions_with_risks(
+        review['document_id'], current_user.email
+    )
     
     review['risks'] = risks
     review['observations'] = observations.get('observations', '') if observations else ''
     review['approvals'] = approvals
-    review['versions'] = versions
     review['documents'] = review_documents_repository.get_review_documents(review_id)
+    review['all_versions'] = all_versions
+    review['versions_with_comments'] = versions_with_comments
+    review['versions_with_risks'] = versions_with_risks
     
     return render_template('reviews/detail.html', review=review)
 
@@ -397,6 +529,47 @@ def choose_approval(review_id):
                 return redirect(url_for('reviews.request_approval', review_id=review_id))
         elif action == 'no':
             # Usuário escolheu não enviar para aprovação agora
+            # Enviar e-mail para visualizadores
+            try:
+                viewers = review_viewers_repository.get_viewers(review_id)
+                viewer_emails = [v['user_email'] for v in viewers]
+                
+                if viewer_emails:
+                    # Construir URL de visualização
+                    reviews_base_url = os.getenv('REVIEWS_BASE_URL')
+                    if not reviews_base_url:
+                        server_name = current_app.config.get('SERVER_NAME')
+                        preferred_scheme = current_app.config.get('PREFERRED_URL_SCHEME', 'http')
+                        if server_name:
+                            reviews_base_url = f"{preferred_scheme}://{server_name}"
+                        else:
+                            host_url = request.host_url.rstrip('/')
+                            if ':5001' in host_url:
+                                reviews_base_url = host_url.replace(':5001', ':5002')
+                            else:
+                                reviews_base_url = host_url
+                    else:
+                        reviews_base_url = reviews_base_url.rstrip('/')
+                    
+                    review_url = f"{reviews_base_url}{url_for('reviews.detail', review_id=review_id)}"
+                    
+                    # Determinar se é novo documento ou nova versão
+                    is_new_document = (review['version'] == 1)
+                    previous_version = review['version'] - 1 if review['version'] > 1 else None
+                    
+                    # Enviar e-mails
+                    result = email_service.send_emails_to_viewers(
+                        viewer_emails, review, review_url,
+                        is_new_document=is_new_document,
+                        previous_version=previous_version
+                    )
+                    
+                    logger.info(f"E-mails enviados para {len(result['sent'])} visualizador(es)")
+                    if result['failed']:
+                        logger.warning(f"Falha ao enviar para {len(result['failed'])} visualizador(es)")
+            except Exception as e:
+                logger.error(f"Erro ao enviar e-mails para visualizadores: {str(e)}", exc_info=True)
+            
             flash('Revisão criada com sucesso! Você pode solicitar aprovação mais tarde.', 'success')
             return redirect(get_return_url(review_id))
     
@@ -557,6 +730,31 @@ def request_approval(review_id):
                     logger.info(f'Email de confirmação enviado para solicitante: {reviewer_email}')
                 except Exception as e:
                     logger.error(f'Erro ao enviar email de confirmação para solicitante: {str(e)}', exc_info=True)
+                
+                # Enviar e-mails para visualizadores informando nova versão/documento
+                try:
+                    viewers = review_viewers_repository.get_viewers(review_id)
+                    viewer_emails = [v['user_email'] for v in viewers]
+                    
+                    if viewer_emails:
+                        review_url = f"{reviews_base_url}{url_for('reviews.detail', review_id=review_id)}"
+                        
+                        # Determinar se é novo documento ou nova versão
+                        is_new_document = (review['version'] == 1)
+                        previous_version = review['version'] - 1 if review['version'] > 1 else None
+                        
+                        # Enviar e-mails
+                        viewer_result = email_service.send_emails_to_viewers(
+                            viewer_emails, review, review_url,
+                            is_new_document=is_new_document,
+                            previous_version=previous_version
+                        )
+                        
+                        logger.info(f"E-mails enviados para {len(viewer_result['sent'])} visualizador(es)")
+                        if viewer_result['failed']:
+                            logger.warning(f"Falha ao enviar para {len(viewer_result['failed'])} visualizador(es)")
+                except Exception as e:
+                    logger.error(f"Erro ao enviar e-mails para visualizadores: {str(e)}", exc_info=True)
                 
                 # Mensagem de sucesso com informações sobre os emails
                 if emails_sent:
@@ -911,6 +1109,7 @@ def export(review_id):
         return redirect(url_for('reviews.manage'))
     
     format_type = request.args.get('format', 'pdf').lower()
+    include_history = request.args.get('include_history', 'false').lower() == 'true'
     
     # Carregar dados completos
     risks = reviews_repository.get_review_risks(review_id)
@@ -922,28 +1121,64 @@ def export(review_id):
     review['approvals'] = approvals
     
     try:
-        if format_type == 'pdf':
-            pdf_data = export_service.export_to_pdf(review)
-            filename = f"revisao_{review_id}_v{review['version']}.pdf"
-            return send_file(
-                BytesIO(pdf_data),
-                mimetype='application/pdf',
-                as_attachment=True,
-                download_name=filename
+        if include_history:
+            # Carregar históricos completos
+            versions_with_comments = reviews_repository.get_all_versions_with_comments(
+                review['document_id'], current_user.email
             )
-        elif format_type == 'docx':
-            docx_data = export_service.export_to_docx(review)
-            filename = f"revisao_{review_id}_v{review['version']}.docx"
-            return send_file(
-                BytesIO(docx_data),
-                mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                as_attachment=True,
-                download_name=filename
+            versions_with_risks = reviews_repository.get_all_versions_with_risks(
+                review['document_id'], current_user.email
             )
+            
+            if format_type == 'pdf':
+                pdf_data = export_service.export_to_pdf_with_history(
+                    review, versions_with_comments, versions_with_risks
+                )
+                filename = f"revisao_{review_id}_v{review['version']}_historico_completo.pdf"
+                return send_file(
+                    BytesIO(pdf_data),
+                    mimetype='application/pdf',
+                    as_attachment=True,
+                    download_name=filename
+                )
+            elif format_type == 'docx':
+                docx_data = export_service.export_to_docx_with_history(
+                    review, versions_with_comments, versions_with_risks
+                )
+                filename = f"revisao_{review_id}_v{review['version']}_historico_completo.docx"
+                return send_file(
+                    BytesIO(docx_data),
+                    mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    as_attachment=True,
+                    download_name=filename
+                )
         else:
-            flash('Formato inválido. Use pdf ou docx', 'error')
-            return redirect(get_return_url(review_id))
+            # Exportação normal (apenas versão atual)
+            if format_type == 'pdf':
+                pdf_data = export_service.export_to_pdf(review)
+                filename = f"revisao_{review_id}_v{review['version']}.pdf"
+                return send_file(
+                    BytesIO(pdf_data),
+                    mimetype='application/pdf',
+                    as_attachment=True,
+                    download_name=filename
+                )
+            elif format_type == 'docx':
+                docx_data = export_service.export_to_docx(review)
+                filename = f"revisao_{review_id}_v{review['version']}.docx"
+                return send_file(
+                    BytesIO(docx_data),
+                    mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    as_attachment=True,
+                    download_name=filename
+                )
+        
+        flash('Formato inválido. Use pdf ou docx', 'error')
+        return redirect(get_return_url(review_id))
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Erro ao exportar revisão: {str(e)}', exc_info=True)
         flash(f'Erro ao exportar revisão: {str(e)}', 'error')
         return redirect(get_return_url(review_id))
 

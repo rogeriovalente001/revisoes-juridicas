@@ -35,29 +35,60 @@
         <div class="card-header">
             <h5 class="mb-0"><i class="fas fa-clipboard-check"></i> Revisões</h5>
         </div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label class="form-label">Responsável pela Revisão</label>
-                    <input type="text" class="form-control" value="{{ current_user.name }}" disabled>
-                    <small class="form-text text-muted">Preenchido automaticamente</small>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Data/Hora da Revisão</label>
-                    <input type="text" class="form-control" id="review_datetime" value="" disabled>
-                    <small class="form-text text-muted">Preenchido automaticamente</small>
-                </div>
-            </div>
+        <div class="card-body" id="reviews-container">
             {% if review %}
             <div class="mb-3">
-                <label class="form-label">Versão</label>
-                <input type="text" class="form-control" value="v{{ review.version }} (Nova versão será criada)" disabled>
+                <label class="form-label">Versão Atual</label>
+                <input type="text" class="form-control" value="v{{ review.version }} (Nova versão será criada ao salvar)" disabled>
             </div>
             {% endif %}
-            <div class="mb-3">
-                <label class="form-label">Comentários da Revisão</label>
-                <textarea name="comments" class="form-control" rows="5">{{ review.comments if review else '' }}</textarea>
-            </div>
+            
+            {% if review and review.review_comments %}
+                {% for comment in review.review_comments %}
+                <div class="review-item mb-3 p-3 border rounded">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Responsável pela Revisão</label>
+                            <input type="text" class="form-control" value="{{ comment.reviewer_name }}" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Data/Hora da Revisão</label>
+                            <input type="text" class="form-control review-datetime" value="{{ comment.review_date.strftime('%d/%m/%Y %H:%M:%S') if comment.review_date else '' }}" disabled>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comentários da Revisão</label>
+                        <textarea name="review_comments[]" class="form-control" rows="3">{{ comment.comments }}</textarea>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-danger remove-review">
+                        <i class="fas fa-trash"></i> Remover
+                    </button>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="review-item mb-3 p-3 border rounded">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Responsável pela Revisão</label>
+                            <input type="text" class="form-control" value="{{ current_user.name }}" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Data/Hora da Revisão</label>
+                            <input type="text" class="form-control review-datetime" disabled>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comentários da Revisão</label>
+                        <textarea name="review_comments[]" class="form-control" rows="3"></textarea>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-danger remove-review">
+                        <i class="fas fa-trash"></i> Remover
+                    </button>
+                </div>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-primary" id="add-review">
+                <i class="fas fa-plus"></i> Adicionar Revisão
+            </button>
         </div>
     </div>
     
@@ -168,10 +199,114 @@
             minute: '2-digit',
             second: '2-digit'
         });
-        const datetimeField = document.getElementById('review_datetime');
-        if (datetimeField) {
-            datetimeField.value = dateTimeStr;
+        
+        // Atualizar todos os campos de data/hora que não têm valor
+        const datetimeFields = document.querySelectorAll('.review-datetime');
+        datetimeFields.forEach(field => {
+            if (!field.value) {
+                field.value = dateTimeStr;
+            }
+        });
+    }
+    
+    // Inicializar gerenciamento de revisões
+    function initReviewManager() {
+        const container = document.getElementById('reviews-container');
+        if (!container) return;
+        
+        const addReviewBtn = document.getElementById('add-review');
+        if (!addReviewBtn) return;
+        
+        // Verificar se já foi inicializado
+        if (addReviewBtn.dataset.initialized === 'true') {
+            return;
         }
+        addReviewBtn.dataset.initialized = 'true';
+        
+        let isAdding = false;
+        
+        // Handler para adicionar revisão
+        function handleAddReview(e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            
+            if (isAdding) {
+                return false;
+            }
+            
+            isAdding = true;
+            
+            const now = new Date();
+            const dateTimeStr = now.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            const newReview = document.createElement('div');
+            newReview.className = 'review-item mb-3 p-3 border rounded';
+            newReview.innerHTML = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Responsável pela Revisão</label>
+                        <input type="text" class="form-control" value="{{ current_user.name }}" disabled>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Data/Hora da Revisão</label>
+                        <input type="text" class="form-control review-datetime" value="${dateTimeStr}" disabled>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Comentários da Revisão</label>
+                    <textarea name="review_comments[]" class="form-control" rows="3"></textarea>
+                </div>
+                <button type="button" class="btn btn-sm btn-danger remove-review">
+                    <i class="fas fa-trash"></i> Remover
+                </button>
+            `;
+            
+            container.insertBefore(newReview, addReviewBtn);
+            
+            setTimeout(function() {
+                isAdding = false;
+            }, 200);
+            
+            return false;
+        }
+        
+        // Handler para remover revisão (event delegation)
+        let isRemoving = false;
+        function handleRemoveReview(e) {
+            const removeBtn = e.target.closest('.remove-review');
+            if (!removeBtn) return;
+            
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            
+            if (isRemoving) {
+                return false;
+            }
+            
+            isRemoving = true;
+            
+            const reviewItem = removeBtn.closest('.review-item');
+            if (reviewItem) {
+                reviewItem.remove();
+            }
+            
+            setTimeout(function() {
+                isRemoving = false;
+            }, 200);
+            
+            return false;
+        }
+        
+        // Adicionar listeners
+        addReviewBtn.addEventListener('click', handleAddReview, true);
+        container.addEventListener('click', handleRemoveReview, true);
     }
     
     // Inicializar gerenciamento de riscos
@@ -266,10 +401,12 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             initDateTime();
+            initReviewManager();
             initRiskManager();
         });
     } else {
         initDateTime();
+        initReviewManager();
         initRiskManager();
     }
 })();

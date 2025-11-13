@@ -151,6 +151,187 @@ class EmailService:
         </html>
         """
     
+    def send_new_document_email(self, viewer_email: str, viewer_name: str,
+                               review_data: dict, review_url: str) -> bool:
+        """Envia email para visualizador informando novo documento criado"""
+        subject = f"Novo Documento Criado - {review_data.get('title', 'Documento')} - V{review_data.get('version', '1')}"
+        html_content = self._get_new_document_template(
+            viewer_name, review_data, review_url
+        )
+        
+        return self._send_email(viewer_email, subject, html_content)
+    
+    def send_new_version_email(self, viewer_email: str, viewer_name: str,
+                              review_data: dict, review_url: str, 
+                              previous_version: int = None) -> bool:
+        """Envia email para visualizador informando nova versão do documento"""
+        current_version = review_data.get('version', 'N/A')
+        subject = f"Nova Versão de Documento - {review_data.get('title', 'Documento')} - V{current_version}"
+        html_content = self._get_new_version_template(
+            viewer_name, review_data, review_url, previous_version
+        )
+        
+        return self._send_email(viewer_email, subject, html_content)
+    
+    def send_emails_to_viewers(self, viewer_emails: list, review_data: dict,
+                              review_url: str, is_new_document: bool = True,
+                              previous_version: int = None) -> dict:
+        """
+        Envia e-mails para múltiplos visualizadores.
+        
+        Args:
+            viewer_emails: Lista de e-mails dos visualizadores
+            review_data: Dados da revisão
+            review_url: URL para visualizar o documento
+            is_new_document: True se é novo documento, False se é nova versão
+            previous_version: Número da versão anterior (para nova versão)
+        
+        Returns:
+            Dict com listas de e-mails enviados e falhados: {'sent': [...], 'failed': [...]}
+        """
+        sent = []
+        failed = []
+        
+        for viewer_email in viewer_emails:
+            try:
+                # Extrair nome do visualizador (se disponível no review_data)
+                viewer_name = viewer_email.split('@')[0].title()
+                
+                if is_new_document:
+                    success = self.send_new_document_email(
+                        viewer_email, viewer_name, review_data, review_url
+                    )
+                else:
+                    success = self.send_new_version_email(
+                        viewer_email, viewer_name, review_data, review_url, previous_version
+                    )
+                
+                if success:
+                    sent.append(viewer_email)
+                    logger.info(f"Email enviado para visualizador: {viewer_email}")
+                else:
+                    failed.append(viewer_email)
+                    logger.warning(f"Falha ao enviar email para visualizador: {viewer_email}")
+            except Exception as e:
+                failed.append(viewer_email)
+                logger.error(f"Erro ao enviar email para visualizador {viewer_email}: {str(e)}", exc_info=True)
+        
+        return {'sent': sent, 'failed': failed}
+    
+    def _get_new_document_template(self, viewer_name: str, review_data: dict, review_url: str) -> str:
+        """Template HTML para email de novo documento"""
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Novo Documento Criado - Revisão Jurídica</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f0f0f0;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f0f0; padding: 20px;">
+                <tr>
+                    <td align="center">
+                        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 15px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); color: #ffffff; padding: 30px; text-align: center;">
+                                    <h1 style="margin: 0; font-size: 28px; font-weight: bold;">Novo Documento Criado</h1>
+                                    <p style="margin: 10px 0 0 0; font-size: 16px;">Sistema de Revisões Jurídicas</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h2 style="margin: 0 0 15px 0; font-size: 24px; color: #333;">Olá, {viewer_name}!</h2>
+                                    <p style="margin: 0 0 25px 0; font-size: 16px; color: #333;">
+                                        Um novo documento foi criado no Sistema de Revisões Jurídicas e você foi adicionado como visualizador.
+                                    </p>
+                                    
+                                    <div style="background-color: #f8f9fa; border-left: 4px solid #8B5CF6; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                                        <h3 style="margin: 0 0 10px 0; font-size: 18px; color: #333;">Informações do Documento</h3>
+                                        <p style="margin: 5px 0;"><strong>Título:</strong> {review_data.get('title', 'N/A')}</p>
+                                        <p style="margin: 5px 0;"><strong>Versão:</strong> V{review_data.get('version', '1')}</p>
+                                        <p style="margin: 5px 0;"><strong>Responsável:</strong> {review_data.get('reviewer_name', 'N/A')}</p>
+                                        <p style="margin: 5px 0;"><strong>Data/Hora:</strong> {review_data.get('review_date').strftime('%d/%m/%Y %H:%M:%S') if review_data.get('review_date') and hasattr(review_data.get('review_date'), 'strftime') else str(review_data.get('review_date', 'N/A'))}</p>
+                                    </div>
+                                    
+                                    <div style="text-align: center; padding: 25px 0;">
+                                        <a href="{review_url}" style="display: inline-block; background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); color: #ffffff; padding: 15px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);">
+                                            Visualizar Documento
+                                        </a>
+                                    </div>
+                                    
+                                    <p style="margin: 20px 0 0 0; font-size: 14px; color: #666;">
+                                        Você pode acessar este documento a qualquer momento através do sistema.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+    
+    def _get_new_version_template(self, viewer_name: str, review_data: dict, 
+                                  review_url: str, previous_version: int = None) -> str:
+        """Template HTML para email de nova versão"""
+        current_version = review_data.get('version', 'N/A')
+        version_info = f"V{previous_version} → V{current_version}" if previous_version else f"V{current_version}"
+        
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Nova Versão de Documento - Revisão Jurídica</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f0f0f0;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f0f0; padding: 20px;">
+                <tr>
+                    <td align="center">
+                        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 15px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #ffffff; padding: 30px; text-align: center;">
+                                    <h1 style="margin: 0; font-size: 28px; font-weight: bold;">Nova Versão de Documento</h1>
+                                    <p style="margin: 10px 0 0 0; font-size: 16px;">Sistema de Revisões Jurídicas</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h2 style="margin: 0 0 15px 0; font-size: 24px; color: #333;">Olá, {viewer_name}!</h2>
+                                    <p style="margin: 0 0 25px 0; font-size: 16px; color: #333;">
+                                        Um documento que você acompanha foi atualizado no Sistema de Revisões Jurídicas.
+                                    </p>
+                                    
+                                    <div style="background-color: #f8f9fa; border-left: 4px solid #10B981; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                                        <h3 style="margin: 0 0 10px 0; font-size: 18px; color: #333;">Informações da Atualização</h3>
+                                        <p style="margin: 5px 0;"><strong>Título:</strong> {review_data.get('title', 'N/A')}</p>
+                                        <p style="margin: 5px 0;"><strong>Versão:</strong> {version_info}</p>
+                                        <p style="margin: 5px 0;"><strong>Responsável pela Alteração:</strong> {review_data.get('reviewer_name', 'N/A')}</p>
+                                        <p style="margin: 5px 0;"><strong>Data/Hora:</strong> {review_data.get('review_date').strftime('%d/%m/%Y %H:%M:%S') if review_data.get('review_date') and hasattr(review_data.get('review_date'), 'strftime') else str(review_data.get('review_date', 'N/A'))}</p>
+                                    </div>
+                                    
+                                    <div style="text-align: center; padding: 25px 0;">
+                                        <a href="{review_url}" style="display: inline-block; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #ffffff; padding: 15px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+                                            Visualizar Nova Versão
+                                        </a>
+                                    </div>
+                                    
+                                    <p style="margin: 20px 0 0 0; font-size: 14px; color: #666;">
+                                        Acesse o documento para ver as alterações realizadas.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+    
     def _send_email(self, to_email: str, subject: str, html_content: str) -> bool:
         """Envia email via SMTP ou salva em arquivo"""
         try:

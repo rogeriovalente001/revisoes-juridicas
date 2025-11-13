@@ -3,7 +3,7 @@ Repositório para controle de visualização de revisões
 """
 
 from typing import List
-from app.db import fetchall, execute, get_db_connection
+from app.db import fetchall, fetchone, execute, get_db_connection
 
 
 def add_viewers(review_id: int, user_emails: List[str]) -> None:

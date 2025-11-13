@@ -160,7 +160,7 @@
                     {% for review in recent_reviews %}
                     <tr>
                         <td>{{ review.title }}</td>
-                        <td>v{{ review.version }}</td>
+                        <td>v{{ review.document_version }}</td>
                         <td>{{ review.reviewer_name }}</td>
                         <td>{{ review.review_date.strftime('%d/%m/%Y %H:%M') if review.review_date else 'N/A' }}</td>
                         <td>
