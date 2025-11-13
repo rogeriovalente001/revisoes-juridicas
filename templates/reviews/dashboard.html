@@ -85,9 +85,9 @@
 <div class="row g-4 mb-4">
     <!-- Rejeitadas -->
     <div class="col-md-4">
-        <div class="card text-white" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3) !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
+        <div class="card text-white h-100" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3) !important;">
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start flex-grow-1">
                     <div>
                         <h6 class="mb-2" style="opacity: 0.9;">Rejeitadas</h6>
                         <h2 class="mb-0 fw-bold">{{ stats.rejected_reviews }}</h2>
@@ -102,9 +102,9 @@
     
     <!-- Revisões Recentes (30 dias) -->
     <div class="col-md-4">
-        <div class="card text-white" style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3) !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
+        <div class="card text-white h-100" style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3) !important;">
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start flex-grow-1">
                     <div>
                         <h6 class="mb-2" style="opacity: 0.9;">Revisões Recentes (30 dias)</h6>
                         <h2 class="mb-0 fw-bold">{{ stats.recent_reviews }}</h2>
@@ -120,9 +120,9 @@
     
     <!-- Total de Documentos -->
     <div class="col-md-4">
-        <div class="card text-white" style="background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3) !important;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
+        <div class="card text-white h-100" style="background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%) !important; border: none !important; box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3) !important;">
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start flex-grow-1">
                     <div>
                         <h6 class="mb-2" style="opacity: 0.9;">Total de Documentos</h6>
                         <h2 class="mb-0 fw-bold">{{ stats.total_documents }}</h2>
