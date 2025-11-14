@@ -2,6 +2,85 @@
 
 {% block title %}Gerenciar Visualizadores - Revisões Jurídicas{% endblock %}
 
+{% block extra_css %}
+<style>
+    .search-container {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    
+    .search-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+    
+    .search-input-wrapper .search-icon {
+        position: absolute;
+        left: 12px;
+        color: #6c757d;
+        pointer-events: none;
+    }
+    
+    .search-input {
+        padding-left: 38px;
+        padding-right: 38px;
+        width: 100%;
+    }
+    
+    .search-clear-btn {
+        position: absolute;
+        right: 8px;
+        background: none;
+        border: none;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 4px 8px;
+        display: none;
+    }
+    
+    .search-clear-btn:hover {
+        color: #dc3545;
+    }
+    
+    .search-clear-btn.active {
+        display: block;
+    }
+    
+    .user-counter {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 8px;
+    }
+    
+    .user-item {
+        transition: opacity 0.2s ease;
+    }
+    
+    .user-item.hidden {
+        display: none !important;
+    }
+    
+    .no-results-message {
+        display: none;
+        padding: 20px;
+        text-align: center;
+        color: #6c757d;
+    }
+    
+    .no-results-message.active {
+        display: block;
+    }
+    
+    .highlight {
+        background-color: #fff3cd;
+        font-weight: 500;
+        padding: 1px 2px;
+        border-radius: 2px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="fas fa-users"></i> Gerenciar Visualizadores</h1>
@@ -31,17 +110,42 @@
             
             <div class="mb-3">
                 <label class="form-label">Usuários</label>
-                <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                
+                <div class="search-container">
+                    <div class="search-input-wrapper">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" 
+                               id="userSearch" 
+                               class="form-control search-input" 
+                               placeholder="Buscar por nome ou email..."
+                               autocomplete="off">
+                        <button type="button" 
+                                id="clearSearch" 
+                                class="search-clear-btn"
+                                title="Limpar busca">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="user-counter" id="userCounter">
+                        {{ users|length }} usuário(s) disponível(is)
+                    </div>
+                </div>
+                
+                <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;" id="userList">
                     {% for user in users %}
-                    <div class="form-check">
+                    <div class="form-check user-item" data-user-name="{{ user.name|lower }}" data-user-email="{{ user.email|lower }}">
                         <input class="form-check-input" type="checkbox" name="viewers[]" 
                                value="{{ user.email }}" id="viewer_{{ loop.index }}"
                                {% if user.email in viewer_emails %}checked{% endif %}>
                         <label class="form-check-label" for="viewer_{{ loop.index }}">
-                            {{ user.name }} ({{ user.email }})
+                            <span class="user-display-text">{{ user.name }} ({{ user.email }})</span>
                         </label>
                     </div>
                     {% endfor %}
+                    <div class="no-results-message" id="noResults">
+                        <i class="fas fa-search fa-2x mb-2"></i>
+                        <p class="mb-0">Nenhum usuário encontrado</p>
+                    </div>
                 </div>
             </div>
             
@@ -62,5 +166,79 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('userSearch');
+        const clearBtn = document.getElementById('clearSearch');
+        const userItems = document.querySelectorAll('.user-item');
+        const userCounter = document.getElementById('userCounter');
+        const noResults = document.getElementById('noResults');
+        const totalUsers = userItems.length;
+        
+        function filterUsers() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            let visibleCount = 0;
+            
+            if (searchTerm === '') {
+                clearBtn.classList.remove('active');
+                userItems.forEach(item => {
+                    item.classList.remove('hidden');
+                    const displayText = item.querySelector('.user-display-text');
+                    const originalText = displayText.textContent;
+                    displayText.innerHTML = originalText;
+                });
+                visibleCount = totalUsers;
+                noResults.classList.remove('active');
+            } else {
+                clearBtn.classList.add('active');
+                
+                userItems.forEach(item => {
+                    const userName = item.getAttribute('data-user-name');
+                    const userEmail = item.getAttribute('data-user-email');
+                    const displayText = item.querySelector('.user-display-text');
+                    const originalText = displayText.textContent;
+                    
+                    if (userName.includes(searchTerm) || userEmail.includes(searchTerm)) {
+                        item.classList.remove('hidden');
+                        visibleCount++;
+                        
+                        const regex = new RegExp(`(${searchTerm})`, 'gi');
+                        const highlightedText = originalText.replace(regex, '<span class="highlight">$1</span>');
+                        displayText.innerHTML = highlightedText;
+                    } else {
+                        item.classList.add('hidden');
+                        displayText.innerHTML = originalText;
+                    }
+                });
+                
+                if (visibleCount === 0) {
+                    noResults.classList.add('active');
+                } else {
+                    noResults.classList.remove('active');
+                }
+            }
+            
+            userCounter.textContent = `${visibleCount} usuário(s) encontrado(s)`;
+        }
+        
+        function clearSearch() {
+            searchInput.value = '';
+            filterUsers();
+            searchInput.focus();
+        }
+        
+        searchInput.addEventListener('input', filterUsers);
+        searchInput.addEventListener('keyup', function(e) {
+            if (e.key === 'Escape') {
+                clearSearch();
+            }
+        });
+        
+        clearBtn.addEventListener('click', clearSearch);
+    });
+</script>
 {% endblock %}
 
