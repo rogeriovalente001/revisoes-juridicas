@@ -3,10 +3,12 @@ from . import reviews_repository
 from . import review_viewers_repository
 from . import review_approvals_repository
 from . import review_documents_repository
+from . import risk_categories_repository
 
 __all__ = [
     'reviews_repository',
     'review_viewers_repository',
     'review_approvals_repository',
-    'review_documents_repository'
+    'review_documents_repository',
+    'risk_categories_repository'
 ]

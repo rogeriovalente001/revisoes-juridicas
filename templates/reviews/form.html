@@ -76,6 +76,17 @@
         <div class="card-body" id="risks-container">
             <div class="risk-item mb-3 p-3 border rounded">
                 <div class="mb-3">
+                    <label class="form-label">Categoria do Risco</label>
+                    <select name="risk_category[]" class="form-select risk-category-select">
+                        <option value="">Selecione uma categoria (opcional)</option>
+                        {% if risk_categories %}
+                            {% for category in risk_categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="mb-3">
                     <label class="form-label">Risco Identificado</label>
                     <textarea name="risk_text[]" class="form-control" rows="2"></textarea>
                 </div>
@@ -464,7 +475,16 @@
             
             const newRisk = document.createElement('div');
             newRisk.className = 'risk-item mb-3 p-3 border rounded';
+            
+            // Clonar o select de categorias do primeiro risco
+            const firstCategorySelect = document.querySelector('.risk-category-select');
+            const categorySelectHTML = firstCategorySelect ? firstCategorySelect.outerHTML : '<select name="risk_category[]" class="form-select risk-category-select"><option value="">Selecione uma categoria (opcional)</option></select>';
+            
             newRisk.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label">Categoria do Risco</label>
+                    ${categorySelectHTML}
+                </div>
                 <div class="mb-3">
                     <label class="form-label">Risco Identificado</label>
                     <textarea name="risk_text[]" class="form-control" rows="2"></textarea>

@@ -64,6 +64,20 @@
                                     </li>
                                 </ul>
                             </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                                    <i class="fas fa-cog"></i>
+                                    <span>Configurações</span>
+                                    <i class="fas fa-chevron-down ms-1"></i>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for('settings.risk_categories') }}">
+                                            <i class="fas fa-tags me-2"></i>Categorias de Risco
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
                         </ul>
                     </nav>
                 </div>

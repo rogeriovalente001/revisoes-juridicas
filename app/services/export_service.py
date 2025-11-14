@@ -58,6 +58,8 @@ class ExportService:
             if review_data.get('risks'):
                 story.append(Paragraph("<b>Riscos Identificados</b>", styles['Heading2']))
                 for risk in review_data.get('risks', []):
+                    category_name = risk.get('category_name', 'Não categorizado')
+                    story.append(Paragraph(f"<b>Categoria:</b> {category_name}", styles['Normal']))
                     story.append(Paragraph(f"<b>Risco:</b> {risk.get('risk_text', 'N/A')}", styles['Normal']))
                     story.append(Paragraph(f"<b>Sugestão:</b> {risk.get('legal_suggestion', 'N/A')}", styles['Normal']))
                     story.append(Paragraph(f"<b>Definição Final:</b> {risk.get('final_definition', 'N/A')}", styles['Normal']))
@@ -168,6 +170,8 @@ class ExportService:
                     risks_list = version.get('risks_list', [])
                     if risks_list:
                         for risk in risks_list:
+                            category_name = risk.get('category_name', 'Não categorizado')
+                            story.append(Paragraph(f"<b>Categoria:</b> {category_name}", styles['Normal']))
                             story.append(Paragraph(f"<b>Risco:</b> {risk.get('risk_text', 'N/A')}", styles['Normal']))
                             if risk.get('legal_suggestion'):
                                 story.append(Paragraph(f"<b>Sugestão do Jurídico:</b> {risk.get('legal_suggestion', '')}", styles['Normal']))
@@ -228,6 +232,8 @@ class ExportService:
             if review_data.get('risks'):
                 doc.add_heading('Riscos Identificados', 1)
                 for risk in review_data.get('risks', []):
+                    category_name = risk.get('category_name', 'Não categorizado')
+                    doc.add_paragraph(f"Categoria: {category_name}")
                     doc.add_paragraph(f"Risco: {risk.get('risk_text', 'N/A')}", style='List Bullet')
                     doc.add_paragraph(f"Sugestão: {risk.get('legal_suggestion', 'N/A')}")
                     doc.add_paragraph(f"Definição Final: {risk.get('final_definition', 'N/A')}")
@@ -321,6 +327,8 @@ class ExportService:
                     risks_list = version.get('risks_list', [])
                     if risks_list:
                         for risk in risks_list:
+                            category_name = risk.get('category_name', 'Não categorizado')
+                            doc.add_paragraph(f"Categoria: {category_name}")
                             doc.add_paragraph(f"Risco: {risk.get('risk_text', 'N/A')}", style='List Bullet')
                             if risk.get('legal_suggestion'):
                                 doc.add_paragraph(f"Sugestão do Jurídico: {risk.get('legal_suggestion', '')}")

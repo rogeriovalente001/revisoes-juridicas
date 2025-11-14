@@ -260,6 +260,11 @@
                                 {% if version.risks_list and version.risks_list|length > 0 %}
                                     {% for risk in version.risks_list %}
                                     <div class="mb-3 p-3 border rounded bg-light">
+                                        {% if risk.category_name %}
+                                        <div class="mb-2">
+                                            <span class="badge bg-info">{{ risk.category_name }}</span>
+                                        </div>
+                                        {% endif %}
                                         <div class="mb-2">
                                             <strong class="text-danger">Risco:</strong>
                                             <p class="mb-1">{{ risk.risk_text }}</p>

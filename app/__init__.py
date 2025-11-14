@@ -69,10 +69,12 @@ def create_app(config_object: type[Config] | None = None) -> Flask:
     from .blueprints.auth.routes import bp as auth_bp, connect_auth
     from .blueprints.reviews.routes import bp as reviews_bp
     from .blueprints.documents.routes import bp as documents_bp
+    from .blueprints.settings.routes import bp as settings_bp
     
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(reviews_bp, url_prefix='/reviews')
     app.register_blueprint(documents_bp, url_prefix='/documents')
+    app.register_blueprint(settings_bp, url_prefix='/settings')
     
     # Exempt rota de autenticação do Connect (recebe tokens de sistemas externos)
     # Esta rota precisa estar isenta de CSRF pois recebe requisições do Connect

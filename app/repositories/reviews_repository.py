@@ -158,12 +158,16 @@ def create_review(document_data: Dict, review_data: Dict, risks_data: List[Dict]
             
             # Criar riscos
             for risk in risks_data:
+                category_id = risk.get('category_id')
+                # Convert empty string to None
+                if category_id == '' or category_id == 'None':
+                    category_id = None
                 cur.execute("""
                     INSERT INTO revisoes_juridicas.review_risks 
-                    (review_id, risk_text, legal_suggestion, final_definition)
-                    VALUES (%s, %s, %s, %s)
+                    (review_id, risk_text, legal_suggestion, final_definition, category_id)
+                    VALUES (%s, %s, %s, %s, %s)
                 """, (review_id, risk.get('risk_text'), risk.get('legal_suggestion'), 
-                      risk.get('final_definition')))
+                      risk.get('final_definition'), category_id))
             
             # Criar observações
             if observations:
@@ -285,12 +289,16 @@ def update_review(review_id: int, document_data: Dict, review_data: Dict,
                 # Adicionar riscos novos (se houver)
                 if has_new_risks and risks_data:
                     for risk in risks_data:
+                        category_id = risk.get('category_id')
+                        # Convert empty string to None
+                        if category_id == '' or category_id == 'None':
+                            category_id = None
                         cur.execute("""
                             INSERT INTO revisoes_juridicas.review_risks 
-                            (review_id, risk_text, legal_suggestion, final_definition)
-                            VALUES (%s, %s, %s, %s)
+                            (review_id, risk_text, legal_suggestion, final_definition, category_id)
+                            VALUES (%s, %s, %s, %s, %s)
                         """, (new_review_id, risk.get('risk_text'), risk.get('legal_suggestion'), 
-                              risk.get('final_definition')))
+                              risk.get('final_definition'), category_id))
                 
                 # Atualizar observações na nova versão
                 cur.execute("""
@@ -362,11 +370,15 @@ def get_review_versions(document_id: int, user_email: str) -> List[Dict]:
 
 
 def get_review_risks(review_id: int) -> List[Dict]:
-    """Obtém riscos de uma revisão"""
+    """Obtém riscos de uma revisão com categoria"""
     return fetchall("""
-        SELECT * FROM revisoes_juridicas.review_risks
-        WHERE review_id = %s
-        ORDER BY id
+        SELECT 
+            rr.*,
+            rc.name as category_name
+        FROM revisoes_juridicas.review_risks rr
+        LEFT JOIN revisoes_juridicas.risk_categories rc ON rr.category_id = rc.id
+        WHERE rr.review_id = %s
+        ORDER BY rr.id
     """, (review_id,))
 
 
@@ -863,12 +875,14 @@ def get_all_versions_with_risks(document_id: int, user_email: str) -> List[Dict]
                 json_build_object(
                     'risk_text', rr.risk_text,
                     'legal_suggestion', rr.legal_suggestion,
-                    'final_definition', rr.final_definition
+                    'final_definition', rr.final_definition,
+                    'category_name', rc.name
                 ) ORDER BY rr.id
             ) as risks_list
         FROM revisoes_juridicas.reviews r
         INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
         INNER JOIN revisoes_juridicas.review_risks rr ON rr.review_id = r.id
+        LEFT JOIN revisoes_juridicas.risk_categories rc ON rr.category_id = rc.id
         WHERE r.document_id = %s 
         AND rv.user_email = %s 
         AND rv.can_view = TRUE

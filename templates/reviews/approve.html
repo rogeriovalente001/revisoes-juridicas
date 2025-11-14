@@ -41,6 +41,9 @@
     <div class="card-body">
         {% for risk in review.risks %}
         <div class="mb-3 p-3 border rounded">
+            {% if risk.category_name %}
+            <p><strong>Categoria:</strong> <span class="badge bg-info">{{ risk.category_name }}</span></p>
+            {% endif %}
             <p><strong>Risco Identificado:</strong> <span class="text-content">{{ risk.risk_text }}</span></p>
             <p><strong>Sugestão do Jurídico:</strong> <span class="text-content">{{ risk.legal_suggestion or 'N/A' }}</span></p>
             <p><strong>Definição Final:</strong> <span class="text-content">{{ risk.final_definition or 'N/A' }}</span></p>

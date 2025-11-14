@@ -115,13 +115,16 @@ def new():
             risk_texts = request.form.getlist('risk_text[]')
             legal_suggestions = request.form.getlist('legal_suggestion[]')
             final_definitions = request.form.getlist('final_definition[]')
+            risk_categories = request.form.getlist('risk_category[]')
             
             for i in range(len(risk_texts)):
                 if risk_texts[i].strip():
+                    category_id = risk_categories[i] if i < len(risk_categories) and risk_categories[i] else None
                     risks_data.append({
                         'risk_text': risk_texts[i].strip(),
                         'legal_suggestion': legal_suggestions[i].strip() if i < len(legal_suggestions) else '',
-                        'final_definition': final_definitions[i].strip() if i < len(final_definitions) else ''
+                        'final_definition': final_definitions[i].strip() if i < len(final_definitions) else '',
+                        'category_id': category_id
                     })
             
             observations = request.form.get('observations', '').strip()
@@ -160,7 +163,11 @@ def new():
             logger.error(f'Erro ao criar revisão: {str(e)}', exc_info=True)
             flash(f'Erro ao criar revisão: {str(e)}', 'error')
     
-    return render_template('reviews/form.html', review=None)
+    # Buscar categorias de risco para o formulário
+    from app.repositories import risk_categories_repository
+    risk_categories = risk_categories_repository.list_all_categories()
+    
+    return render_template('reviews/form.html', review=None, risk_categories=risk_categories)
 
 
 @bp.route('/<int:review_id>/edit', methods=['GET', 'POST'])
@@ -216,15 +223,18 @@ def edit(review_id):
             risk_texts = request.form.getlist('risk_text[]')
             legal_suggestions = request.form.getlist('legal_suggestion[]')
             final_definitions = request.form.getlist('final_definition[]')
+            risk_categories_form = request.form.getlist('risk_category[]')
             
             for i in range(len(risk_texts)):
                 risk_text_stripped = risk_texts[i].strip()
                 if risk_text_stripped and risk_text_stripped not in old_risk_texts:
                     # Este é um risco novo, adicionar à lista
+                    category_id = risk_categories_form[i] if i < len(risk_categories_form) and risk_categories_form[i] else None
                     risks_data.append({
                         'risk_text': risk_text_stripped,
                         'legal_suggestion': legal_suggestions[i].strip() if i < len(legal_suggestions) else '',
-                        'final_definition': final_definitions[i].strip() if i < len(final_definitions) else ''
+                        'final_definition': final_definitions[i].strip() if i < len(final_definitions) else '',
+                        'category_id': category_id
                     })
             
             observations = request.form.get('observations', '').strip()
@@ -337,7 +347,11 @@ def edit(review_id):
     review['versions_with_comments'] = versions_with_comments
     review['versions_with_risks'] = versions_with_risks
     
-    return render_template('reviews/form.html', review=review)
+    # Buscar categorias de risco para o formulário
+    from app.repositories import risk_categories_repository
+    risk_categories = risk_categories_repository.list_all_categories()
+    
+    return render_template('reviews/form.html', review=review, risk_categories=risk_categories)
 
 
 @bp.route('/<int:review_id>')
