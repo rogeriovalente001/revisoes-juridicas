@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 from app.db import fetchone, fetchall, execute, execute_returning
 
 
-def list_reviews(user_email: str, filters: Dict = None) -> List[Dict]:
+def list_reviews(user_email: str, filters: Dict = None, page: int = 1, per_page: int = 10) -> List[Dict]:
     """
     Lista revisões que o usuário tem permissão de visualizar.
     Filtra na query SQL para não mostrar revisões sem permissão.
@@ -54,6 +54,9 @@ def list_reviews(user_email: str, filters: Dict = None) -> List[Dict]:
     if where_clauses:
         additional_where = " AND " + " AND ".join(where_clauses)
     
+    # Calcular offset para paginação
+    offset = (page - 1) * per_page
+    
     query = f"""
         WITH latest_reviews AS (
             SELECT 
@@ -91,8 +94,10 @@ def list_reviews(user_email: str, filters: Dict = None) -> List[Dict]:
         INNER JOIN latest_reviews lr ON r.id = lr.latest_review_id
         WHERE 1=1{additional_where}
         ORDER BY r.review_date DESC, d.updated_at DESC
+        LIMIT %s OFFSET %s
     """
     
+    params.extend([per_page, offset])
     return fetchall(query, tuple(params))
 
 
@@ -471,8 +476,10 @@ def get_dashboard_stats(user_email: str) -> Dict:
     return stats
 
 
-def get_recent_reviews_list(user_email: str, limit: int = 5) -> List[Dict]:
+def get_recent_reviews_list(user_email: str, page: int = 1, per_page: int = 10) -> List[Dict]:
     """Obtém lista de revisões recentes para o dashboard (apenas última versão de cada documento)"""
+    offset = (page - 1) * per_page
+    
     return fetchall("""
         WITH latest_reviews AS (
             SELECT 
@@ -509,8 +516,101 @@ def get_recent_reviews_list(user_email: str, limit: int = 5) -> List[Dict]:
         INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
         INNER JOIN latest_reviews lr ON r.id = lr.latest_review_id
         ORDER BY r.review_date DESC, d.updated_at DESC
-        LIMIT %s
-    """, (user_email, limit))
+        LIMIT %s OFFSET %s
+    """, (user_email, per_page, offset))
+
+
+def count_recent_reviews(user_email: str) -> int:
+    """Conta o total de revisões recentes (apenas última versão de cada documento)"""
+    result = fetchone("""
+        WITH latest_reviews AS (
+            SELECT 
+                r.document_id,
+                MAX(r.id) as latest_review_id
+            FROM revisoes_juridicas.reviews r
+            WHERE EXISTS (
+                SELECT 1 FROM revisoes_juridicas.review_viewers rv 
+                WHERE rv.review_id = r.id 
+                AND rv.user_email = %s 
+                AND rv.can_view = TRUE
+            )
+            GROUP BY r.document_id
+        )
+        SELECT COUNT(*) as total
+        FROM latest_reviews
+    """, (user_email,))
+    
+    return result['total'] if result else 0
+
+
+def count_reviews(user_email: str, filters: Dict = None) -> int:
+    """Conta o total de revisões com filtros aplicados (apenas última versão de cada documento)"""
+    filters = filters or {}
+    
+    # Construir query com filtros (mesma lógica de list_reviews)
+    where_clauses = []
+    params = [user_email]
+    
+    # Filtro por status
+    if filters.get('status'):
+        status = filters['status']
+        if status == 'pending':
+            where_clauses.append("EXISTS (SELECT 1 FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'pending')")
+        elif status == 'approved':
+            where_clauses.append("EXISTS (SELECT 1 FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'approved')")
+        elif status == 'rejected':
+            where_clauses.append("EXISTS (SELECT 1 FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'rejected')")
+        elif status == 'in_review':
+            where_clauses.append("NOT EXISTS (SELECT 1 FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id)")
+    
+    # Filtro por título/descrição
+    if filters.get('search'):
+        search_term = f"%{filters['search']}%"
+        where_clauses.append("(d.title ILIKE %s OR d.description ILIKE %s)")
+        params.extend([search_term, search_term])
+    
+    # Filtro por aprovadores
+    if filters.get('approvers'):
+        approver_emails = filters['approvers']
+        placeholders = ','.join(['%s'] * len(approver_emails))
+        where_clauses.append(f"EXISTS (SELECT 1 FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.approver_email IN ({placeholders}))")
+        params.extend(approver_emails)
+    
+    # Filtro por responsável/revisor
+    if filters.get('reviewers'):
+        reviewer_emails = filters['reviewers']
+        placeholders = ','.join(['%s'] * len(reviewer_emails))
+        where_clauses.append(f"r.reviewer_email IN ({placeholders})")
+        params.extend(reviewer_emails)
+    
+    # Montar WHERE clause adicional
+    additional_where = ""
+    if where_clauses:
+        additional_where = " AND " + " AND ".join(where_clauses)
+    
+    query = f"""
+        WITH latest_reviews AS (
+            SELECT 
+                r.document_id,
+                MAX(r.id) as latest_review_id
+            FROM revisoes_juridicas.reviews r
+            WHERE EXISTS (
+                SELECT 1 FROM revisoes_juridicas.review_viewers rv 
+                WHERE rv.review_id = r.id 
+                AND rv.user_email = %s 
+                AND rv.can_view = TRUE
+            )
+            GROUP BY r.document_id
+        )
+        SELECT COUNT(*) as total
+        FROM revisoes_juridicas.reviews r
+        INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
+        INNER JOIN latest_reviews lr ON r.id = lr.latest_review_id
+        WHERE 1=1{additional_where}
+    """
+    
+    result = fetchone(query, tuple(params))
+    return result['total'] if result else 0
 
 
 def get_approvers_with_reviews(user_email: str) -> List[Dict]:

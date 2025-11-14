@@ -31,9 +31,20 @@ def get_return_url(review_id, default='detail'):
 @require_action('view')
 def dashboard():
     """Dashboard principal com estatísticas de revisões"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    
     stats = reviews_repository.get_dashboard_stats(current_user.email)
-    recent_reviews = reviews_repository.get_recent_reviews_list(current_user.email, limit=5)
-    return render_template('reviews/dashboard.html', stats=stats, recent_reviews=recent_reviews)
+    recent_reviews = reviews_repository.get_recent_reviews_list(current_user.email, page=page, per_page=per_page)
+    total_reviews = reviews_repository.count_recent_reviews(current_user.email)
+    total_pages = (total_reviews + per_page - 1) // per_page
+    
+    return render_template('reviews/dashboard.html', 
+                         stats=stats, 
+                         recent_reviews=recent_reviews,
+                         page=page,
+                         total_pages=total_pages,
+                         total_reviews=total_reviews)
 
 
 @bp.route('/manage')
@@ -41,6 +52,9 @@ def dashboard():
 @require_action('view')
 def manage():
     """Lista revisões com filtros (Gerenciamento de Revisões)"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    
     filters = {
         'status': request.args.get('status'),
         'search': request.args.get('search'),
@@ -48,13 +62,22 @@ def manage():
         'reviewers': request.args.getlist('reviewers')
     }
     
-    reviews = reviews_repository.list_reviews(current_user.email, filters)
+    reviews = reviews_repository.list_reviews(current_user.email, filters, page=page, per_page=per_page)
+    total_reviews = reviews_repository.count_reviews(current_user.email, filters)
+    total_pages = (total_reviews + per_page - 1) // per_page
     
     # Obter apenas aprovadores e responsáveis que têm revisões
     approvers = reviews_repository.get_approvers_with_reviews(current_user.email)
     reviewers = reviews_repository.get_reviewers_with_reviews(current_user.email)
     
-    return render_template('reviews/list.html', reviews=reviews, filters=filters, approvers=approvers, reviewers=reviewers)
+    return render_template('reviews/list.html', 
+                         reviews=reviews, 
+                         filters=filters, 
+                         approvers=approvers, 
+                         reviewers=reviewers,
+                         page=page,
+                         total_pages=total_pages,
+                         total_reviews=total_reviews)
 
 
 @bp.route('/new', methods=['GET', 'POST'])
