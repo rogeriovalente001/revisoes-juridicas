@@ -296,9 +296,23 @@ def edit(review_id):
     observations_obj = reviews_repository.get_review_observations(review_id)
     review_comments = reviews_repository.get_review_comments(review_id)
     
+    # Carregar históricos completos (todas as versões)
+    all_versions = reviews_repository.get_all_document_versions(
+        review['document_id'], current_user.email
+    )
+    versions_with_comments = reviews_repository.get_all_versions_with_comments(
+        review['document_id'], current_user.email
+    )
+    versions_with_risks = reviews_repository.get_all_versions_with_risks(
+        review['document_id'], current_user.email
+    )
+    
     review['risks'] = risks
     review['observations'] = observations_obj.get('observations', '') if observations_obj else ''
     review['review_comments'] = review_comments
+    review['all_versions'] = all_versions
+    review['versions_with_comments'] = versions_with_comments
+    review['versions_with_risks'] = versions_with_risks
     
     return render_template('reviews/form.html', review=review)
 
@@ -345,27 +359,46 @@ def detail(review_id):
 @login_required
 @require_action('delete')
 def delete(review_id):
-    """Exclui revisão (hard delete)"""
+    """Exclui TODAS as revisões do documento (hard delete)"""
     review = reviews_repository.get_review_by_id(review_id, current_user.email)
     
     if not review:
         flash('Revisão não encontrada ou sem permissão', 'error')
-        return redirect(url_for('reviews.manage'))
+        return_to = request.args.get('return_to') or request.form.get('return_to', '')
+        if return_to == 'manage':
+            return redirect(url_for('reviews.manage'))
+        else:
+            return redirect(url_for('reviews.dashboard'))
     
     try:
-        # Excluir arquivos do servidor
-        documents = review_documents_repository.get_review_documents(review_id)
-        for doc in documents:
-            review_documents_repository.delete_document_file(doc['id'])
+        document_id = review['document_id']
         
-        # Excluir revisão (CASCADE excluirá registros relacionados)
+        # Obter TODAS as revisões do documento para excluir arquivos
+        all_reviews = reviews_repository.get_review_versions(document_id, current_user.email)
+        
+        # Excluir arquivos de TODAS as revisões do documento
+        for rev in all_reviews:
+            documents = review_documents_repository.get_review_documents(rev['id'])
+            for doc in documents:
+                review_documents_repository.delete_document_file(doc['id'])
+        
+        # Excluir TODAS as revisões do documento e o documento
+        # (a função delete_review agora exclui todas as versões)
         reviews_repository.delete_review(review_id)
         
-        flash('Revisão excluída com sucesso!', 'success')
+        flash('Documento e todas as suas revisões excluídos com sucesso!', 'success')
     except Exception as e:
-        flash(f'Erro ao excluir revisão: {str(e)}', 'error')
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Erro ao excluir documento: {str(e)}', exc_info=True)
+        flash(f'Erro ao excluir documento: {str(e)}', 'error')
     
-    return redirect(url_for('reviews.manage'))
+    # Redirecionar baseado no contexto de onde veio
+    return_to = request.args.get('return_to') or request.form.get('return_to', '')
+    if return_to == 'manage':
+        return redirect(url_for('reviews.manage'))
+    else:
+        return redirect(url_for('reviews.dashboard'))
 
 
 @bp.route('/pending-approvals')

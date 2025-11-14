@@ -43,49 +43,25 @@
             </div>
             {% endif %}
             
-            {% if review and review.review_comments %}
-                {% for comment in review.review_comments %}
-                <div class="review-item mb-3 p-3 border rounded">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Responsável pela Revisão</label>
-                            <input type="text" class="form-control" value="{{ comment.reviewer_name }}" disabled>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Data/Hora da Revisão</label>
-                            <input type="text" class="form-control review-datetime" value="{{ comment.review_date.strftime('%d/%m/%Y %H:%M:%S') if comment.review_date else '' }}" disabled>
-                        </div>
+            <div class="review-item mb-3 p-3 border rounded">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Responsável pela Revisão</label>
+                        <input type="text" class="form-control" value="{{ current_user.name }}" disabled>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Comentários da Revisão</label>
-                        <textarea name="review_comments[]" class="form-control" rows="3">{{ comment.comments }}</textarea>
+                    <div class="col-md-6">
+                        <label class="form-label">Data/Hora da Revisão</label>
+                        <input type="text" class="form-control review-datetime" disabled>
                     </div>
-                    <button type="button" class="btn btn-sm btn-danger remove-review">
-                        <i class="fas fa-trash"></i> Remover
-                    </button>
                 </div>
-                {% endfor %}
-            {% else %}
-                <div class="review-item mb-3 p-3 border rounded">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Responsável pela Revisão</label>
-                            <input type="text" class="form-control" value="{{ current_user.name }}" disabled>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Data/Hora da Revisão</label>
-                            <input type="text" class="form-control review-datetime" disabled>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Comentários da Revisão</label>
-                        <textarea name="review_comments[]" class="form-control" rows="3"></textarea>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-danger remove-review">
-                        <i class="fas fa-trash"></i> Remover
-                    </button>
+                <div class="mb-3">
+                    <label class="form-label">Comentários da Revisão</label>
+                    <textarea name="review_comments[]" class="form-control" rows="3"></textarea>
                 </div>
-            {% endif %}
+                <button type="button" class="btn btn-sm btn-danger remove-review">
+                    <i class="fas fa-trash"></i> Remover
+                </button>
+            </div>
             <button type="button" class="btn btn-sm btn-primary" id="add-review">
                 <i class="fas fa-plus"></i> Adicionar Revisão
             </button>
@@ -98,45 +74,23 @@
             <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Riscos Identificados e Tratamento</h5>
         </div>
         <div class="card-body" id="risks-container">
-            {% if review and review.risks %}
-                {% for risk in review.risks %}
-                <div class="risk-item mb-3 p-3 border rounded">
-                    <div class="mb-3">
-                        <label class="form-label">Risco Identificado</label>
-                        <textarea name="risk_text[]" class="form-control" rows="2">{{ risk.risk_text }}</textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Sugestão do Jurídico</label>
-                        <textarea name="legal_suggestion[]" class="form-control" rows="2">{{ risk.legal_suggestion }}</textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Definição Final</label>
-                        <textarea name="final_definition[]" class="form-control" rows="2">{{ risk.final_definition }}</textarea>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-danger remove-risk">
-                        <i class="fas fa-trash"></i> Remover
-                    </button>
+            <div class="risk-item mb-3 p-3 border rounded">
+                <div class="mb-3">
+                    <label class="form-label">Risco Identificado</label>
+                    <textarea name="risk_text[]" class="form-control" rows="2"></textarea>
                 </div>
-                {% endfor %}
-            {% else %}
-                <div class="risk-item mb-3 p-3 border rounded">
-                    <div class="mb-3">
-                        <label class="form-label">Risco Identificado</label>
-                        <textarea name="risk_text[]" class="form-control" rows="2"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Sugestão do Jurídico</label>
-                        <textarea name="legal_suggestion[]" class="form-control" rows="2"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Definição Final</label>
-                        <textarea name="final_definition[]" class="form-control" rows="2"></textarea>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-danger remove-risk">
-                        <i class="fas fa-trash"></i> Remover
-                    </button>
+                <div class="mb-3">
+                    <label class="form-label">Sugestão do Jurídico</label>
+                    <textarea name="legal_suggestion[]" class="form-control" rows="2"></textarea>
                 </div>
-            {% endif %}
+                <div class="mb-3">
+                    <label class="form-label">Definição Final</label>
+                    <textarea name="final_definition[]" class="form-control" rows="2"></textarea>
+                </div>
+                <button type="button" class="btn btn-sm btn-danger remove-risk">
+                    <i class="fas fa-trash"></i> Remover
+                </button>
+            </div>
             <button type="button" class="btn btn-sm btn-primary" id="add-risk">
                 <i class="fas fa-plus"></i> Adicionar Risco
             </button>
@@ -164,6 +118,178 @@
             <small class="form-text text-muted">Formatos permitidos: PDF, DOC, DOCX, TXT, RTF. Máximo 10MB por arquivo.</small>
         </div>
     </div>
+    
+    {% if review %}
+    <!-- Histórico de Revisões -->
+    {% if review.versions_with_comments and review.versions_with_comments|length > 0 %}
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseReviewHistory" aria-expanded="false" aria-controls="collapseReviewHistory">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-clipboard-list text-primary"></i> Histórico de Revisões
+                    <span class="badge bg-primary ms-2">{{ review.versions_with_comments|length }} versão(ões)</span>
+                </h5>
+                <i class="fas fa-chevron-down text-primary transition-icon"></i>
+            </div>
+        </div>
+        <div class="collapse" id="collapseReviewHistory">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 10%;">Versão</th>
+                                <th style="width: 20%;">Responsável</th>
+                                <th style="width: 20%;">Data/Hora</th>
+                                <th style="width: 50%;">Comentários</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for version in review.versions_with_comments %}
+                            <tr>
+                                <td><strong>V{{ version.version }}</strong></td>
+                                <td>{{ version.reviewer_name }}</td>
+                                <td>
+                                    {% if version.review_date %}
+                                        {% if version.review_date is string %}
+                                            {{ version.review_date }}
+                                        {% else %}
+                                            {{ version.review_date.strftime('%d/%m/%Y %H:%M:%S') }}
+                                        {% endif %}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if version.comments_list and version.comments_list|length > 0 %}
+                                        {% for comment in version.comments_list %}
+                                        <div class="mb-2 p-2 border-start border-3 border-primary bg-light">
+                                            <small class="text-muted">
+                                                <strong>{{ comment.reviewer_name }}</strong> - 
+                                                {% if comment.review_date %}
+                                                    {% if comment.review_date is string %}
+                                                        {{ comment.review_date }}
+                                                    {% else %}
+                                                        {{ comment.review_date.strftime('%d/%m/%Y %H:%M:%S') }}
+                                                    {% endif %}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </small>
+                                            <p class="mb-0 mt-1">{{ comment.comment }}</p>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <em class="text-muted">Nenhum comentário</em>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Histórico de Riscos -->
+    {% if review.versions_with_risks and review.versions_with_risks|length > 0 %}
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseRiskHistory" aria-expanded="false" aria-controls="collapseRiskHistory">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle text-warning"></i> Histórico de Riscos
+                    <span class="badge bg-warning text-dark ms-2">{{ review.versions_with_risks|length }} versão(ões)</span>
+                </h5>
+                <i class="fas fa-chevron-down text-warning transition-icon"></i>
+            </div>
+        </div>
+        <div class="collapse" id="collapseRiskHistory">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 10%;">Versão</th>
+                                <th style="width: 70%;">Riscos Identificados</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for version in review.versions_with_risks %}
+                            <tr>
+                                <td><strong>V{{ version.version }}</strong></td>
+                                <td>
+                                    {% if version.risks_list and version.risks_list|length > 0 %}
+                                        {% for risk in version.risks_list %}
+                                        <div class="mb-3 p-3 border rounded bg-light">
+                                            <div class="mb-2">
+                                                <strong class="text-danger">Risco:</strong>
+                                                <p class="mb-1">{{ risk.risk_text }}</p>
+                                            </div>
+                                            {% if risk.legal_suggestion %}
+                                            <div class="mb-2">
+                                                <strong class="text-primary">Sugestão do Jurídico:</strong>
+                                                <p class="mb-1">{{ risk.legal_suggestion }}</p>
+                                            </div>
+                                            {% endif %}
+                                            {% if risk.final_definition %}
+                                            <div>
+                                                <strong class="text-success">Definição Final:</strong>
+                                                <p class="mb-0">{{ risk.final_definition }}</p>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <em class="text-muted">Nenhum risco identificado</em>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Histórico de Versões -->
+    {% if review.all_versions and review.all_versions|length > 0 %}
+    <div class="card mb-4 border-info">
+        <div class="card-header bg-info bg-opacity-10" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseVersionHistory" aria-expanded="false" aria-controls="collapseVersionHistory">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-history text-info"></i> Histórico de Versões
+                    <span class="badge bg-info ms-2">{{ review.all_versions|length }} versão(ões)</span>
+                </h5>
+                <i class="fas fa-chevron-down text-info transition-icon"></i>
+            </div>
+        </div>
+        <div class="collapse" id="collapseVersionHistory">
+            <div class="card-body">
+                <div class="list-group">
+                    {% for version in review.all_versions %}
+                    <a href="{{ url_for('reviews.detail', review_id=version.review_id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                <i class="fas fa-file-alt text-info"></i> Versão {{ version.version }}
+                                {% if version.review_id == review.id %}
+                                    <span class="badge bg-success ms-2">Atual</span>
+                                {% endif %}
+                            </h6>
+                            <small>{{ version.review_date.strftime('%d/%m/%Y %H:%M') if version.review_date else 'N/A' }}</small>
+                        </div>
+                        <p class="mb-1"><i class="fas fa-user text-muted"></i> Revisor: {{ version.reviewer_name }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
     
     <div class="d-flex justify-content-end">
         <a href="{{ url_for('reviews.manage') }}" class="btn btn-secondary me-2">Cancelar</a>
@@ -413,3 +539,28 @@
 </script>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    .transition-icon {
+        transition: transform 0.3s ease;
+    }
+    
+    [aria-expanded="true"] .transition-icon {
+        transform: rotate(180deg);
+    }
+    
+    .card-header[data-bs-toggle="collapse"]:hover {
+        opacity: 0.9;
+        transition: opacity 0.2s ease;
+    }
+    
+    .border-primary, .border-warning, .border-info {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .border-primary:hover, .border-warning:hover, .border-info:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}

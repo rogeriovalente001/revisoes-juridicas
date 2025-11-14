@@ -14,11 +14,8 @@ def list_reviews(user_email: str, filters: Dict = None) -> List[Dict]:
     filters = filters or {}
     
     # Construir query com filtros
-    where_clauses = [
-        "rv.user_email = %s",  # Apenas revisões que o usuário pode visualizar
-        "rv.can_view = TRUE"
-    ]
-    params = [user_email]
+    where_clauses = []
+    params = [user_email]  # Primeiro parâmetro para o EXISTS
     
     # Filtro por status
     if filters.get('status'):
@@ -52,7 +49,10 @@ def list_reviews(user_email: str, filters: Dict = None) -> List[Dict]:
         where_clauses.append(f"r.reviewer_email IN ({placeholders})")
         params.extend(reviewer_emails)
     
-    where_sql = " AND ".join(where_clauses)
+    # Montar WHERE clause adicional (além do filtro de permissão)
+    additional_where = ""
+    if where_clauses:
+        additional_where = " AND " + " AND ".join(where_clauses)
     
     query = f"""
         WITH latest_reviews AS (
@@ -60,6 +60,12 @@ def list_reviews(user_email: str, filters: Dict = None) -> List[Dict]:
                 r.document_id,
                 MAX(r.id) as latest_review_id
             FROM revisoes_juridicas.reviews r
+            WHERE EXISTS (
+                SELECT 1 FROM revisoes_juridicas.review_viewers rv 
+                WHERE rv.review_id = r.id 
+                AND rv.user_email = %s 
+                AND rv.can_view = TRUE
+            )
             GROUP BY r.document_id
         )
         SELECT 
@@ -82,10 +88,9 @@ def list_reviews(user_email: str, filters: Dict = None) -> List[Dict]:
             (SELECT COUNT(*) FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'rejected') as rejected_count
         FROM revisoes_juridicas.reviews r
         INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
-        INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
         INNER JOIN latest_reviews lr ON r.id = lr.latest_review_id
-        WHERE {where_sql}
-        ORDER BY d.updated_at DESC, r.review_date DESC
+        WHERE 1=1{additional_where}
+        ORDER BY r.review_date DESC, d.updated_at DESC
     """
     
     return fetchall(query, tuple(params))
@@ -294,10 +299,44 @@ def update_review(review_id: int, document_data: Dict, review_data: Dict,
 
 
 def delete_review(review_id: int) -> bool:
-    """Exclui uma revisão (hard delete)"""
-    # Como há CASCADE, excluir a revisão excluirá todos os registros relacionados
-    execute("DELETE FROM revisoes_juridicas.reviews WHERE id = %s", (review_id,))
-    return True
+    """
+    Exclui TODAS as revisões de um documento (hard delete).
+    Quando o usuário exclui uma revisão, todas as versões do documento são excluídas.
+    """
+    from app.db import get_db_connection
+    
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            # Obter document_id da revisão
+            cur.execute("""
+                SELECT document_id FROM revisoes_juridicas.reviews WHERE id = %s
+            """, (review_id,))
+            result = cur.fetchone()
+            
+            if not result:
+                return False
+            
+            document_id = result[0]
+            
+            # Excluir TODAS as revisões do documento
+            # CASCADE excluirá automaticamente:
+            # - review_risks
+            # - review_observations
+            # - review_documents
+            # - review_viewers
+            # - review_approvals
+            # - review_comments
+            cur.execute("""
+                DELETE FROM revisoes_juridicas.reviews WHERE document_id = %s
+            """, (document_id,))
+            
+            # Excluir o documento também
+            cur.execute("""
+                DELETE FROM revisoes_juridicas.documents WHERE id = %s
+            """, (document_id,))
+            
+            conn.commit()
+            return True
 
 
 def get_review_versions(document_id: int, user_email: str) -> List[Dict]:
@@ -440,6 +479,12 @@ def get_recent_reviews_list(user_email: str, limit: int = 5) -> List[Dict]:
                 r.document_id,
                 MAX(r.id) as latest_review_id
             FROM revisoes_juridicas.reviews r
+            WHERE EXISTS (
+                SELECT 1 FROM revisoes_juridicas.review_viewers rv 
+                WHERE rv.review_id = r.id 
+                AND rv.user_email = %s 
+                AND rv.can_view = TRUE
+            )
             GROUP BY r.document_id
         )
         SELECT 
@@ -462,10 +507,8 @@ def get_recent_reviews_list(user_email: str, limit: int = 5) -> List[Dict]:
             (SELECT COUNT(*) FROM revisoes_juridicas.review_approvals ra WHERE ra.review_id = r.id AND ra.status = 'rejected') as rejected_count
         FROM revisoes_juridicas.reviews r
         INNER JOIN revisoes_juridicas.documents d ON r.document_id = d.id
-        INNER JOIN revisoes_juridicas.review_viewers rv ON r.id = rv.review_id
         INNER JOIN latest_reviews lr ON r.id = lr.latest_review_id
-        WHERE rv.user_email = %s AND rv.can_view = TRUE
-        ORDER BY d.updated_at DESC, r.review_date DESC
+        ORDER BY r.review_date DESC, d.updated_at DESC
         LIMIT %s
     """, (user_email, limit))
 

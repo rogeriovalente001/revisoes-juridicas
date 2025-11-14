@@ -194,9 +194,10 @@
                                 </a>
                                 {% endif %}
                                 {% if current_user.can_delete() %}
-                                <form method="POST" action="{{ url_for('reviews.delete', review_id=review.id) }}" style="display: inline;" onsubmit="return confirm('Tem certeza que deseja excluir esta revisão?');">
+                                <form method="POST" action="{{ url_for('reviews.delete', review_id=review.id) }}" style="display: inline;" onsubmit="return confirm('ATENÇÃO: Esta ação excluirá o documento e TODAS as suas revisões (versões). Tem certeza que deseja continuar?');">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Excluir">
+                                    <input type="hidden" name="return_to" value="dashboard">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Excluir Documento e Todas as Revisões">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
